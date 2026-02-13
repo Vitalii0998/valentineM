@@ -33,6 +33,7 @@ const stage=document.getElementById("stage");
 const engine=Engine.create();
 engine.positionIterations=10;
 engine.velocityIterations=10;
+engine.enableSleeping=true;
 
 const w=stage.clientWidth;
 const h=stage.clientHeight;
@@ -112,6 +113,27 @@ let textMode=false;
 let textPoints=[];
 let targets=[];
 
+const NORMAL_HEART_RADIUS=7.1;
+const TEXT_MODE_TRIGGER=700;
+const MAX_HEARTS=2200;
+
+const heartSpriteCache=new Map();
+function getHeartSprite(size){
+  const key=Math.max(4,Math.round(size));
+  if(heartSpriteCache.has(key)) return heartSpriteCache.get(key);
+  const c=document.createElement("canvas");
+  const pad=3;
+  c.width=key+pad*2;
+  c.height=key+pad*2;
+  const cctx=c.getContext("2d");
+  cctx.textAlign="center";
+  cctx.textBaseline="middle";
+  cctx.font=key+"px system-ui, Apple Color Emoji";
+  cctx.fillText("❤️",c.width/2,c.height/2+0.5);
+  heartSpriteCache.set(key,c);
+  return c;
+}
+
 function randomInside(){
   let x,y;
   do{
@@ -154,7 +176,7 @@ function enterTextMode(){
 function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
-  const r = 6.4;
+  const r = NORMAL_HEART_RADIUS;
   const pos = randomInside();
 
   const body = Bodies.circle(pos.x,pos.y,r,{
@@ -162,17 +184,18 @@ function spawn(){
     friction:0.15,
     frictionAir:0.001,
     density:0.003,
+    sleepThreshold:30,
     render:{visible:false}
   });
 
   Composite.add(engine.world,body);
   hearts.push({body,r,drawScale:1,targetDrawScale:1});
 
-  if(hearts.length>420 && !textMode){
+  if(hearts.length>TEXT_MODE_TRIGGER && !textMode){
     enterTextMode();
   }
 
-  if(hearts.length>1400){
+  if(hearts.length>MAX_HEARTS){
     Composite.remove(engine.world,hearts.shift().body);
   }
 }
@@ -355,8 +378,8 @@ Events.on(render,"afterRender",()=>{
     ctx.rotate(hrt.body.angle);
     hrt.drawScale += (hrt.targetDrawScale-hrt.drawScale)*0.16;
     const glyphSize=Math.max(4,hrt.r*2*hrt.drawScale);
-    ctx.font=glyphSize+"px system-ui, Apple Color Emoji";
-    ctx.fillText("❤️",0,0);
+    const sprite=getHeartSprite(glyphSize);
+    ctx.drawImage(sprite,-sprite.width/2,-sprite.height/2);
     ctx.restore();
   }
 });
@@ -371,6 +394,7 @@ function updateTextMode(){
   // плавно підтягувати до цілей, без залежності від devicemotion
   for(let i=0;i<hearts.length;i++){
     const h=hearts[i];
+    if(h.body.isStatic) continue;
     const t=targets[i];
     if(!t) continue;
 
