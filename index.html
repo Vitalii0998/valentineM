@@ -147,7 +147,7 @@ function enterTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.27;
+    h.targetDrawScale=0.24;
   }
 }
 
@@ -307,17 +307,17 @@ function generateTextPoints(){
 
   // Тримаємо помітну частку в лівій/правій буквах, щоб центр не "з'їдав" усе
   const total=hearts.length;
-  const vCount=Math.round(total*0.25);
-  const mCount=Math.round(total*0.25);
+  const vCount=Math.round(total*0.20);
+  const mCount=Math.round(total*0.20);
   const wordCount=total-vCount-mCount;
 
   targets.push(...assignFromPool(vPoints,vCount,3.2));
   targets.push(...assignFromPool(mPoints,mCount,3.2));
 
-  const wordTopCount=Math.round(wordCount*0.72);
+  const wordTopCount=Math.round(wordCount*0.74);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,1.5));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,1.3));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,1.1));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,1.0));
 
   shuffle(targets);
 }
@@ -384,7 +384,7 @@ function updateTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.27;
+    h.targetDrawScale=0.24;
 
     const dx=t.x-nx;
     const dy=t.y-ny;
