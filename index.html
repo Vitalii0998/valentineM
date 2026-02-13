@@ -23,13 +23,13 @@ canvas{width:100%;height:100%}
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
 <script>
-const {Engine,Render,Runner,Bodies,Composite,Body,Events,Vertices} = Matter;
+const {Engine,Render,Runner,Bodies,Composite,Body,Events} = Matter;
 
 const stage = document.getElementById("stage");
 const engine = Engine.create();
 engine.positionIterations = 10;
 engine.velocityIterations = 10;
-engine.gravity.scale = 0.001; // стабільніше
+engine.gravity.scale = 0.001;
 
 const w = stage.clientWidth;
 const h = stage.clientHeight;
@@ -49,7 +49,7 @@ Runner.run(Runner.create(), engine);
 
 // ---------------- HEART GEOMETRY ----------------
 
-function heartPoints(cx,cy,scale,n=260){
+function heartPoints(cx,cy,scale,n=320){
   const pts=[];
   for(let i=0;i<n;i++){
     const t=(i/n)*Math.PI*2;
@@ -72,27 +72,16 @@ function pointInsideHeart(x,y){
 
 const outline = heartPoints(centerX, centerY, scale, 320);
 
-// 1 суцільний статичний body
 const heartWall = Bodies.fromVertices(
   centerX, centerY,
   [outline.map(p=>({x:p.x,y:p.y}))],
-  {
-    isStatic:true,
-    render:{visible:false},
-    friction:0.2,
-    restitution:0.1
-  },
+  { isStatic:true, render:{visible:false}, friction:0.2, restitution:0.1 },
   true
 );
 
-// важливо: інколи fromVertices повертає масив
-if (Array.isArray(heartWall)) {
-  Composite.add(engine.world, heartWall);
-} else {
-  Composite.add(engine.world, heartWall);
-}
+Composite.add(engine.world, heartWall);
 
-// легка страховка по краях canvas, але тонка і невидима
+// страховка по краях canvas
 const pad = 30;
 Composite.add(engine.world, [
   Bodies.rectangle(w/2, -pad/2, w+2*pad, pad, {isStatic:true, render:{visible:false}}),
@@ -143,7 +132,7 @@ function spawn(){
   }
 }
 
-// анти-тунелювання: м’який ліміт швидкості
+// ліміт швидкості
 const MAX_V = 14;
 Events.on(engine,"beforeUpdate",()=>{
   for(const h of hearts){
@@ -172,11 +161,10 @@ function enterTextMode(){
   engine.gravity.x=0;
   engine.gravity.y=0;
 
-  // прибираємо колізії між частинками, але залишаємо з межами серця
   for(const h of hearts){
     Body.setStatic(h.body,false);
-    h.body.collisionFilter.group = -1; // не штовхаються між собою
-    h.body.collisionFilter.mask = 0xFFFFFFFF; // колайдяться зі стінками
+    h.body.collisionFilter.group = -1;
+    h.body.collisionFilter.mask = 0xFFFFFFFF;
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
   }
@@ -188,7 +176,6 @@ function generateTextPoints(){
   const ctx=off.getContext("2d");
   ctx.clearRect(0,0,w,h);
 
-  // знайдемо внутрішні межі серця
   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   for(let y=0;y<h;y+=6){
     for(let x=0;x<w;x+=6){
@@ -249,7 +236,6 @@ function generateTextPoints(){
 Events.on(render,"afterRender",()=>{
   const ctx=render.context;
 
-  // контур серця
   ctx.beginPath();
   ctx.moveTo(outline[0].x, outline[0].y);
   for(const p of outline) ctx.lineTo(p.x,p.y);
@@ -266,7 +252,6 @@ Events.on(render,"afterRender",()=>{
   ctx.stroke();
   ctx.shadowBlur=0;
 
-  // частинки
   ctx.textAlign="center";
   ctx.textBaseline="middle";
   for(const hrt of hearts){
@@ -280,36 +265,60 @@ Events.on(render,"afterRender",()=>{
   }
 });
 
-// ---------------- MOTION CONTROL ----------------
+// ---------------- CONTROLS (NORMAL, AS YOU WANTED) ----------------
 
-// 1) deviceorientation: стабільніше за devicemotion для “нахилу”
+// smooth gravity
+let gxt=0, gyt=0;
+function setGravitySmooth(x,y){
+  gxt = x;
+  gyt = y;
+}
+
+// deviceorientation тільки для нахилу
 function onOrientation(e){
   if(textMode) return;
 
-  // beta: front-back, gamma: left-right
   const beta = (e.beta ?? 0);
   const gamma = (e.gamma ?? 0);
 
-  // мапінг у гравітацію
-  const gx = Math.max(-1, Math.min(1, gamma / 30));
-  const gy = Math.max(-1, Math.min(1, beta / 30));
+  // чутливість
+  let gx = gamma / 35;
+  let gy = beta / 35;
 
-  engine.gravity.x = gx;
-  engine.gravity.y = gy;
+  // clamp
+  gx = Math.max(-1, Math.min(1, gx));
+  gy = Math.max(-1, Math.min(1, gy));
+
+  // на багатьох телефонах Y треба інвертувати
+  setGravitySmooth(gx, gy);
 }
 
-// 2) fallback: тягнемо гравітацію до курсора/тачу
-function onPointerMove(ev){
+// застосовуємо згладжено кожен апдейт
+Events.on(engine, "beforeUpdate", ()=>{
   if(textMode) return;
-  const rect = stage.getBoundingClientRect();
-  const x = (ev.clientX - rect.left) / rect.width;
-  const y = (ev.clientY - rect.top) / rect.height;
-  engine.gravity.x = (x - 0.5) * 2;
-  engine.gravity.y = (y - 0.5) * 2;
+  engine.gravity.x += (gxt - engine.gravity.x) * 0.15;
+  engine.gravity.y += (gyt - engine.gravity.y) * 0.15;
+});
+
+// shake тільки для спавну
+let lastShake=0;
+function onShake(e){
+  if(textMode) return;
+  const a = e.acceleration;
+  if(!a) return;
+
+  const mag = Math.hypot(a.x||0, a.y||0, a.z||0);
+  const now = Date.now();
+
+  if(mag > 14 && now - lastShake > 250){
+    lastShake = now;
+    for(let i=0;i<25;i++) spawn();
+  }
 }
 
-// iOS просить permission
-async function enableMotion(){
+// iOS permission + підключення сенсорів
+async function enableSensors(){
+  // orientation permission
   if (typeof DeviceOrientationEvent !== "undefined" &&
       typeof DeviceOrientationEvent.requestPermission === "function") {
     try{
@@ -321,15 +330,15 @@ async function enableMotion(){
   } else {
     window.addEventListener("deviceorientation", onOrientation, true);
   }
+
+  // devicemotion (shake)
+  window.addEventListener("devicemotion", onShake, {passive:true});
 }
 
-window.addEventListener("pointerdown", async (e)=>{
-  await enableMotion();
-  // якщо орієнтації нема, то буде працювати pointer move
-  stage.setPointerCapture?.(e.pointerId);
-  stage.addEventListener("pointermove", onPointerMove);
-},{once:true});
+// включаємо сенсори по першому тапу (як було у твоєму початковому підході)
+window.addEventListener("pointerdown", enableSensors, {once:true});
 
+// space теж спавнить
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
     for(let i=0;i<25;i++) spawn();
