@@ -33,7 +33,7 @@ const stage=document.getElementById("stage");
 const engine=Engine.create();
 engine.positionIterations=10;
 engine.velocityIterations=10;
-engine.enableSleeping=true;
+engine.enableSleeping=false;
 
 const w=stage.clientWidth;
 const h=stage.clientHeight;
@@ -100,6 +100,9 @@ for(let i=0;i<pts.length;i++){
     25,
     {
       isStatic:true,
+      friction:0,
+      frictionStatic:0,
+      restitution:0.2,
       collisionFilter:{ category:0x0001 }
     }
   );
@@ -196,11 +199,11 @@ function spawn(){
   const pos = randomInside();
 
   const body = Bodies.circle(pos.x,pos.y,r,{
-    restitution:0.05,
-    friction:0.15,
-    frictionAir:0.001,
+    restitution:0.15,
+    friction:0.01,
+    frictionStatic:0,
+    frictionAir:0.00035,
     density:0.003,
-    sleepThreshold:30,
     render:{visible:false}
   });
 
@@ -472,8 +475,6 @@ window.addEventListener("keydown",e=>{
   }
 });
 
-// старт: можеш накидати трохи сердечок одразу
-for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
