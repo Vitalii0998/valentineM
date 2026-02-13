@@ -85,13 +85,18 @@ for(let i=0;i<pts.length;i++){
   const len=Math.hypot(dx,dy);
   const angle=Math.atan2(dy,dx);
 
-  const wall=Bodies.rectangle(
-    (a.x+b.x)/2,
-    (a.y+b.y)/2,
-    len+25,
-    25,
-    {isStatic:true}
-  );
+const wall=Bodies.rectangle(
+  (a.x+b.x)/2,
+  (a.y+b.y)/2,
+  len+25,
+  25,
+  {
+    isStatic:true,
+    collisionFilter:{
+      category:0x0001
+    }
+  }
+);
   Body.setAngle(wall,angle);
   Composite.add(engine.world,wall);
 }
@@ -132,9 +137,9 @@ if(hearts.length>200 && !textMode){
   generateTextPoints();
 
   // 🔥 вимикаємо колізії між частинками
-  for(const h of hearts){
-    h.body.collisionFilter.group = -1;
-  }
+for(const h of hearts){
+  h.body.collisionFilter.category = 0x0002;
+  h.body.collisionFilter.mask = 0x0001;
 }
 
   if(hearts.length>700){
@@ -282,6 +287,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
