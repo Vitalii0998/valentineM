@@ -183,16 +183,18 @@ function generateTextPoints(){
   ctx.textAlign="center";
   ctx.textBaseline="middle";
 
-  // Текст тримаємо в центрі серця, щоб цілі не "сповзали" вниз на мобілках
-  const lineGap = scale*3.0;
-  const yTop = centerY - lineGap;
-  const yBottom = centerY + lineGap;
+  // Розкладка як на референсі: V ліворуч, M праворуч, "valentine" по центру нижче
+  const xL = centerX - scale*6.0;
+  const xR = centerX + scale*6.0;
+  const yTop = centerY - scale*2.1;
+  const yBottom = centerY + scale*5.4;
 
-  ctx.font=`900 ${Math.round(scale*2.2)}px Arial`;
-  ctx.fillText("For My Valentine,", centerX, yTop);
+  ctx.font=`900 ${Math.round(scale*3.8)}px Arial`;
+  ctx.fillText("V", xL, yTop);
+  ctx.fillText("M", xR, yTop);
 
-  ctx.font=`900 ${Math.round(scale*2.6)}px Arial`;
-  ctx.fillText("Marta", centerX, yBottom);
+  ctx.font=`900 ${Math.round(scale*2.8)}px Arial`;
+  ctx.fillText("valentine", centerX, yBottom);
 
   const data=ctx.getImageData(0,0,w,h).data;
 
