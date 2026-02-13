@@ -127,7 +127,7 @@ function spawn(){
   Composite.add(engine.world,body);
   hearts.push({body,r});
 
-  if(hearts.length>350 && !textMode){
+  if(hearts.length>180 && !textMode){
     textMode=true;
     generateTextPoints();
   }
@@ -281,3 +281,4 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
