@@ -249,24 +249,24 @@ function generateTextPoints(){
     return fallbackFactory();
   }
 
-  function assignFromPool(pool,count,jitterMax=4){
+  function assignFromPool(pool,count,jitterMax=4,drawScale=0.18){
     const out=[];
     if(pool.length===0){
-      for(let i=0;i<count;i++) out.push(randomInside());
+      for(let i=0;i<count;i++) out.push({...randomInside(),drawScale});
       return out;
     }
     for(let i=0;i<count;i++){
       const base=pool[i%pool.length];
       const rep=(i/pool.length)|0;
       if(rep===0){
-        out.push(base);
+        out.push({x:base.x,y:base.y,drawScale});
         continue;
       }
       const angle=i*0.63+rep*1.17;
       const radius=Math.min(jitterMax,rep*0.45);
       const x=base.x+Math.cos(angle)*radius;
       const y=base.y+Math.sin(angle)*radius;
-      out.push(pointInsideHeart(x,y)?{x,y}:base);
+      out.push(pointInsideHeart(x,y)?{x,y,drawScale}:{x:base.x,y:base.y,drawScale});
     }
     return out;
   }
@@ -301,7 +301,7 @@ function generateTextPoints(){
 
   targets=[];
   if(textPoints.length===0){
-    for(let i=0;i<hearts.length;i++) targets[i]=randomInside();
+    for(let i=0;i<hearts.length;i++) targets[i]={...randomInside(),drawScale:0.18};
     return;
   }
 
@@ -311,13 +311,13 @@ function generateTextPoints(){
   const mCount=Math.round(total*0.22);
   const wordCount=total-vCount-mCount;
 
-  targets.push(...assignFromPool(vPoints,vCount,3.2));
-  targets.push(...assignFromPool(mPoints,mCount,3.2));
+  targets.push(...assignFromPool(vPoints,vCount,3.1,0.19));
+  targets.push(...assignFromPool(mPoints,mCount,3.1,0.19));
 
-  const wordTopCount=Math.round(wordCount*0.74);
+  const wordTopCount=Math.round(wordCount*0.68);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.9));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.8));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.65,0.16));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.55,0.155));
 
   shuffle(targets);
 }
@@ -384,12 +384,12 @@ function updateTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.18;
+    h.targetDrawScale=t.drawScale ?? 0.18;
 
     const dx=t.x-nx;
     const dy=t.y-ny;
     if(dx*dx+dy*dy < 2.5*2.5){
-      Body.setPosition(h.body,t);
+      Body.setPosition(h.body,{x:t.x,y:t.y});
       Body.setVelocity(h.body,{x:0,y:0});
       Body.setStatic(h.body,true);
     }
