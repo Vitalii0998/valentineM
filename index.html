@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Heart Physics</title>
-
 <style>
 html,body{
   margin:0;
@@ -15,10 +14,7 @@ html,body{
   justify-content:center;
   overflow:hidden;
 }
-#stage{
-  width:98vmin;
-  height:98vmin;
-}
+#stage{width:98vmin;height:98vmin}
 canvas{width:100%;height:100%}
 </style>
 </head>
@@ -27,18 +23,19 @@ canvas{width:100%;height:100%}
 
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
 <script>
-const {Engine,Render,Runner,Bodies,Composite,Body,Events} = Matter;
+const {Engine,Render,Runner,Bodies,Composite,Body,Events,Vertices} = Matter;
 
-const stage=document.getElementById("stage");
-const engine=Engine.create();
-engine.positionIterations=12;
-engine.velocityIterations=12;
+const stage = document.getElementById("stage");
+const engine = Engine.create();
+engine.positionIterations = 10;
+engine.velocityIterations = 10;
+engine.gravity.scale = 0.001; // стабільніше
 
-const w=stage.clientWidth;
-const h=stage.clientHeight;
+const w = stage.clientWidth;
+const h = stage.clientHeight;
 
-const render=Render.create({
-  element:stage,
+const render = Render.create({
+  element: stage,
   engine,
   options:{
     width:w,
@@ -47,22 +44,12 @@ const render=Render.create({
     background:"transparent"
   }
 });
-
 Render.run(render);
-Runner.run(Runner.create(),engine);
+Runner.run(Runner.create(), engine);
 
-// рамка по краях canvas
-const pad = 80;
-Composite.add(engine.world, [
-  Bodies.rectangle(w/2, -pad/2, w+2*pad, pad, {isStatic:true}),
-  Bodies.rectangle(w/2, h+pad/2, w+2*pad, pad, {isStatic:true}),
-  Bodies.rectangle(-pad/2, h/2, pad, h+2*pad, {isStatic:true}),
-  Bodies.rectangle(w+pad/2, h/2, pad, h+2*pad, {isStatic:true}),
-]);
+// ---------------- HEART GEOMETRY ----------------
 
-// ---------------- HEART SHAPE ----------------
-
-function heartPoints(cx,cy,scale,n=520){
+function heartPoints(cx,cy,scale,n=260){
   const pts=[];
   for(let i=0;i<n;i++){
     const t=(i/n)*Math.PI*2;
@@ -73,9 +60,9 @@ function heartPoints(cx,cy,scale,n=520){
   return pts;
 }
 
-const centerX=w/2;
-const centerY=h/2;
-const scale=Math.min(w,h)*0.03;
+const centerX = w/2;
+const centerY = h/2;
+const scale = Math.min(w,h)*0.03;
 
 function pointInsideHeart(x,y){
   const dx=(x-centerX)/scale;
@@ -83,44 +70,36 @@ function pointInsideHeart(x,y){
   return Math.pow(dx*dx+dy*dy-1,3)-dx*dx*dy*dy*dy <= 0;
 }
 
-// фізичні стінки (подвійний шар)
-const WALL_THICK = 70;
-const WALL_OVERLAP = 160;
+const outline = heartPoints(centerX, centerY, scale, 320);
 
-function addHeartWalls(points){
-  for(let i=0;i<points.length;i++){
-    const a=points[i];
-    const b=points[(i+1)%points.length];
-    const dx=b.x-a.x;
-    const dy=b.y-a.y;
-    const len=Math.hypot(dx,dy);
-    const angle=Math.atan2(dy,dx);
+// 1 суцільний статичний body
+const heartWall = Bodies.fromVertices(
+  centerX, centerY,
+  [outline.map(p=>({x:p.x,y:p.y}))],
+  {
+    isStatic:true,
+    render:{visible:false},
+    friction:0.2,
+    restitution:0.1
+  },
+  true
+);
 
-    const wall=Bodies.rectangle(
-      (a.x+b.x)/2,
-      (a.y+b.y)/2,
-      len + WALL_OVERLAP,
-      WALL_THICK,
-      {
-        isStatic:true,
-        friction:1,
-        restitution:0
-      }
-    );
-
-    Body.setAngle(wall,angle);
-    Composite.add(engine.world,wall);
-  }
+// важливо: інколи fromVertices повертає масив
+if (Array.isArray(heartWall)) {
+  Composite.add(engine.world, heartWall);
+} else {
+  Composite.add(engine.world, heartWall);
 }
 
-const ptsOuter = heartPoints(centerX, centerY, scale, 520);
-const ptsInner = heartPoints(centerX, centerY, scale*0.965, 520);
-
-addHeartWalls(ptsOuter);
-addHeartWalls(ptsInner);
-
-// для рендера контуру залишимо зовнішній
-const pts = ptsOuter;
+// легка страховка по краях canvas, але тонка і невидима
+const pad = 30;
+Composite.add(engine.world, [
+  Bodies.rectangle(w/2, -pad/2, w+2*pad, pad, {isStatic:true, render:{visible:false}}),
+  Bodies.rectangle(w/2, h+pad/2, w+2*pad, pad, {isStatic:true, render:{visible:false}}),
+  Bodies.rectangle(-pad/2, h/2, pad, h+2*pad, {isStatic:true, render:{visible:false}}),
+  Bodies.rectangle(w+pad/2, h/2, pad, h+2*pad, {isStatic:true, render:{visible:false}}),
+]);
 
 // ---------------- PARTICLES ----------------
 
@@ -128,21 +107,6 @@ const hearts=[];
 let textMode=false;
 let textPoints=[];
 let targets=[];
-
-const MAX_V = 8; // сильніший ліміт, менше тунелювання
-
-Events.on(engine, "beforeUpdate", () => {
-  for (const h of hearts) {
-    const v = h.body.velocity;
-    const speed = Math.hypot(v.x, v.y);
-    if (speed > MAX_V) {
-      Body.setVelocity(h.body, {
-        x: v.x * (MAX_V / speed),
-        y: v.y * (MAX_V / speed)
-      });
-    }
-  }
-});
 
 function randomInside(){
   let x,y;
@@ -152,6 +116,46 @@ function randomInside(){
   }while(!pointInsideHeart(x,y));
   return {x,y};
 }
+
+function spawn(){
+  if(textMode) return;
+
+  const r = 6 + Math.random()*3;
+  const pos = randomInside();
+
+  const body = Bodies.circle(pos.x,pos.y,r,{
+    restitution:0.2,
+    friction:0.05,
+    frictionAir:0.01,
+    density:0.0025,
+    render:{visible:false}
+  });
+
+  Composite.add(engine.world,body);
+  hearts.push({body,r});
+
+  if(hearts.length>220 && !textMode){
+    enterTextMode();
+  }
+
+  if(hearts.length>750){
+    Composite.remove(engine.world, hearts.shift().body);
+  }
+}
+
+// анти-тунелювання: м’який ліміт швидкості
+const MAX_V = 14;
+Events.on(engine,"beforeUpdate",()=>{
+  for(const h of hearts){
+    const v=h.body.velocity;
+    const sp=Math.hypot(v.x,v.y);
+    if(sp>MAX_V){
+      Body.setVelocity(h.body,{x:v.x*(MAX_V/sp),y:v.y*(MAX_V/sp)});
+    }
+  }
+});
+
+// ---------------- TEXT ----------------
 
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
@@ -168,88 +172,51 @@ function enterTextMode(){
   engine.gravity.x=0;
   engine.gravity.y=0;
 
+  // прибираємо колізії між частинками, але залишаємо з межами серця
   for(const h of hearts){
     Body.setStatic(h.body,false);
-
-    // прибираємо колізії, щоб не застрягали при формуванні тексту
-    h.body.collisionFilter.group = -1;
-    h.body.collisionFilter.mask = 0;
-
+    h.body.collisionFilter.group = -1; // не штовхаються між собою
+    h.body.collisionFilter.mask = 0xFFFFFFFF; // колайдяться зі стінками
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
   }
 }
 
-function spawn(){
-  if(textMode) return;
-
-  const r = 6 + Math.random()*3;
-  const pos = randomInside();
-
-  const body = Bodies.circle(pos.x,pos.y,r,{
-    restitution:0.05,
-    friction:0.15,
-    frictionAir:0.02,
-    density:0.003,
-    render:{visible:false}
-  });
-
-  Composite.add(engine.world,body);
-  hearts.push({body,r});
-
-  if(hearts.length>200 && !textMode){
-    enterTextMode();
-  }
-
-  if(hearts.length>700){
-    Composite.remove(engine.world,hearts.shift().body);
-  }
-}
-
-// ---------------- TEXT ----------------
-
 function generateTextPoints(){
   const off=document.createElement("canvas");
-  off.width=w;
-  off.height=h;
+  off.width=w; off.height=h;
   const ctx=off.getContext("2d");
   ctx.clearRect(0,0,w,h);
 
-  // межі внутрішньої області серця
-  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  // знайдемо внутрішні межі серця
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   for(let y=0;y<h;y+=6){
     for(let x=0;x<w;x+=6){
       if(pointInsideHeart(x,y)){
-        if(x<minX) minX=x;
-        if(x>maxX) maxX=x;
-        if(y<minY) minY=y;
-        if(y>maxY) maxY=y;
+        if(x<minX)minX=x; if(x>maxX)maxX=x;
+        if(y<minY)minY=y; if(y>maxY)maxY=y;
       }
     }
   }
 
-  const padX = (maxX-minX)*0.12;
-  const padY = (maxY-minY)*0.12;
+  const padX=(maxX-minX)*0.14;
+  const padY=(maxY-minY)*0.14;
 
-  const innerMinX = minX + padX;
-  const innerMaxX = maxX - padX;
-  const innerMinY = minY + padY;
-  const innerMaxY = maxY - padY;
+  const innerMinX=minX+padX, innerMaxX=maxX-padX;
+  const innerMinY=minY+padY, innerMaxY=maxY-padY;
+  const innerW=innerMaxX-innerMinX, innerH=innerMaxY-innerMinY;
 
-  const innerW = innerMaxX - innerMinX;
-  const innerH = innerMaxY - innerMinY;
-
-  const xL = innerMinX + innerW*0.30;
-  const xR = innerMinX + innerW*0.70;
-  const yTop = innerMinY + innerH*0.36;
-  const yBottom = innerMinY + innerH*0.72;
+  const xL=innerMinX+innerW*0.30;
+  const xR=innerMinX+innerW*0.70;
+  const yTop=innerMinY+innerH*0.38;
+  const yBottom=innerMinY+innerH*0.74;
 
   ctx.fillStyle="white";
   ctx.textAlign="center";
   ctx.textBaseline="middle";
 
-  const big = Math.round(Math.min(innerW, innerH)*0.22);
-  const mid = Math.round(Math.min(innerW, innerH)*0.13);
+  const big=Math.round(Math.min(innerW,innerH)*0.22);
+  const mid=Math.round(Math.min(innerW,innerH)*0.13);
 
   ctx.font=`900 ${big}px Arial`;
   ctx.fillText("V", xL, yTop);
@@ -274,9 +241,7 @@ function generateTextPoints(){
 
   targets=[];
   const count=Math.min(hearts.length,textPoints.length);
-  for(let i=0;i<count;i++){
-    targets[i]=textPoints[i];
-  }
+  for(let i=0;i<count;i++) targets[i]=textPoints[i];
 }
 
 // ---------------- RENDER ----------------
@@ -284,9 +249,10 @@ function generateTextPoints(){
 Events.on(render,"afterRender",()=>{
   const ctx=render.context;
 
+  // контур серця
   ctx.beginPath();
-  ctx.moveTo(pts[0].x,pts[0].y);
-  for(const p of pts) ctx.lineTo(p.x,p.y);
+  ctx.moveTo(outline[0].x, outline[0].y);
+  for(const p of outline) ctx.lineTo(p.x,p.y);
   ctx.closePath();
 
   const grad=ctx.createLinearGradient(0,0,w,h);
@@ -300,6 +266,7 @@ Events.on(render,"afterRender",()=>{
   ctx.stroke();
   ctx.shadowBlur=0;
 
+  // частинки
   ctx.textAlign="center";
   ctx.textBaseline="middle";
   for(const hrt of hearts){
@@ -313,75 +280,64 @@ Events.on(render,"afterRender",()=>{
   }
 });
 
-// ---------------- MOTION ----------------
+// ---------------- MOTION CONTROL ----------------
 
-let lastShake=0;
+// 1) deviceorientation: стабільніше за devicemotion для “нахилу”
+function onOrientation(e){
+  if(textMode) return;
 
-function motion(e){
-  if(textMode){
-    for(let i=0;i<hearts.length;i++){
-      const h=hearts[i];
-      const t=targets[i];
-      if(!t) continue;
+  // beta: front-back, gamma: left-right
+  const beta = (e.beta ?? 0);
+  const gamma = (e.gamma ?? 0);
 
-      const px=h.body.position.x;
-      const py=h.body.position.y;
-
-      const nx=px+(t.x-px)*0.18;
-      const ny=py+(t.y-py)*0.18;
-
-      Body.setPosition(h.body,{x:nx,y:ny});
-      Body.setVelocity(h.body,{x:0,y:0});
-      Body.setAngularVelocity(h.body,0);
-
-      const dx=t.x-nx, dy=t.y-ny;
-      if(dx*dx+dy*dy < 2.5*2.5){
-        Body.setPosition(h.body,t);
-        Body.setVelocity(h.body,{x:0,y:0});
-        Body.setStatic(h.body,true);
-      }
-    }
-    return;
-  }
-
-  const now=Date.now();
-
-  const a=e.acceleration||e.accelerationIncludingGravity;
-  if(a){
-    const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
-    if(mag>14 && now-lastShake>200){
-      lastShake=now;
-      for(let i=0;i<20;i++) spawn();
-    }
-  }
-
-const g = e.accelerationIncludingGravity;
-if (g) {
-  let gx = (g.x || 0) / 10;
-  let gy = -(g.y || 0) / 10;
-
-  // обмежимо, щоб не “вистрілювало”
-  gx = Math.max(-1, Math.min(1, gx));
-  gy = Math.max(-1, Math.min(1, gy));
+  // мапінг у гравітацію
+  const gx = Math.max(-1, Math.min(1, gamma / 30));
+  const gy = Math.max(-1, Math.min(1, beta / 30));
 
   engine.gravity.x = gx;
   engine.gravity.y = gy;
 }
+
+// 2) fallback: тягнемо гравітацію до курсора/тачу
+function onPointerMove(ev){
+  if(textMode) return;
+  const rect = stage.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) / rect.width;
+  const y = (ev.clientY - rect.top) / rect.height;
+  engine.gravity.x = (x - 0.5) * 2;
+  engine.gravity.y = (y - 0.5) * 2;
 }
 
-window.addEventListener("pointerdown",()=>{
-  window.addEventListener("devicemotion",motion,{passive:true});
+// iOS просить permission
+async function enableMotion(){
+  if (typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function") {
+    try{
+      const res = await DeviceOrientationEvent.requestPermission();
+      if(res === "granted"){
+        window.addEventListener("deviceorientation", onOrientation, true);
+      }
+    }catch(_){}
+  } else {
+    window.addEventListener("deviceorientation", onOrientation, true);
+  }
+}
+
+window.addEventListener("pointerdown", async (e)=>{
+  await enableMotion();
+  // якщо орієнтації нема, то буде працювати pointer move
+  stage.setPointerCapture?.(e.pointerId);
+  stage.addEventListener("pointermove", onPointerMove);
 },{once:true});
 
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
-    for(let i=0;i<20;i++) spawn();
+    for(let i=0;i<25;i++) spawn();
   }
 });
 
 // старт
-for(let i=0;i<40;i++) spawn();
+for(let i=0;i<60;i++) spawn();
 </script>
 </body>
 </html>
-
