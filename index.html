@@ -147,7 +147,7 @@ function enterTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.58;
+    h.targetDrawScale=0.38;
   }
 }
 
@@ -343,7 +343,7 @@ Events.on(render,"afterRender",()=>{
     ctx.translate(p.x,p.y);
     ctx.rotate(hrt.body.angle);
     hrt.drawScale += (hrt.targetDrawScale-hrt.drawScale)*0.16;
-    const glyphSize=Math.max(8,hrt.r*2*hrt.drawScale);
+    const glyphSize=Math.max(6,hrt.r*2*hrt.drawScale);
     ctx.font=glyphSize+"px system-ui, Apple Color Emoji";
     ctx.fillText("❤️",0,0);
     ctx.restore();
@@ -373,7 +373,7 @@ function updateTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.58;
+    h.targetDrawScale=0.38;
 
     const dx=t.x-nx;
     const dy=t.y-ny;
