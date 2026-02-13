@@ -117,6 +117,8 @@ const hearts=[];
 let textMode=false;
 let textPoints=[];
 let targets=[];
+let resetMode="idle"; // idle | gather | explode
+let resetGatherStartedAt=0;
 
 const NORMAL_HEART_RADIUS=5.6;
 const TEXT_MODE_TRIGGER=1200;
@@ -171,6 +173,7 @@ function shuffle(arr){
 }
 
 function enterTextMode(){
+  if(resetMode!=="idle") return;
   textMode=true;
   generateTextPoints();
 
@@ -189,6 +192,71 @@ function enterTextMode(){
     Body.setAngularVelocity(h.body,0);
 
     h.targetDrawScale=0.18;
+  }
+}
+
+function startResetSequence(){
+  if(!textMode || resetMode!=="idle") return;
+
+  resetMode="gather";
+  resetGatherStartedAt=performance.now();
+  textMode=false;
+  targets.length=0;
+
+  engine.gravity.x=0;
+  engine.gravity.y=0;
+
+  for(const h of hearts){
+    Body.setStatic(h.body,false);
+    h.body.collisionFilter.group=-1;
+    h.body.collisionFilter.mask=0;
+    Body.setVelocity(h.body,{x:0,y:0});
+    Body.setAngularVelocity(h.body,0);
+    h.targetDrawScale=0.26;
+  }
+}
+
+function triggerExplosion(){
+  resetMode="explode";
+
+  engine.gravity.x=0;
+  engine.gravity.y=1;
+
+  for(const h of hearts){
+    const p=h.body.position;
+    const dx=p.x-centerX;
+    const dy=p.y-centerY;
+    const len=Math.hypot(dx,dy)||1;
+    const ux=dx/len;
+    const uy=dy/len;
+    const speed=8+Math.random()*5;
+
+    Body.setStatic(h.body,false);
+    h.body.collisionFilter.group=0;
+    h.body.collisionFilter.mask=0x0001;
+    Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.85-1.6});
+    Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.55);
+    h.targetDrawScale=0.5;
+  }
+}
+
+function cleanupExplodedHearts(){
+  for(let i=hearts.length-1;i>=0;i--){
+    const hb=hearts[i].body;
+    const p=hb.position;
+    if((p.y>h+80 && hb.velocity.y>0.1) || p.x<-80 || p.x>w+80){
+      Composite.remove(engine.world,hb);
+      hearts.splice(i,1);
+    }
+  }
+
+  if(hearts.length===0){
+    resetMode="idle";
+    textMode=false;
+    textPoints=[];
+    targets=[];
+    engine.gravity.x=0;
+    engine.gravity.y=0;
   }
 }
 
@@ -347,10 +415,10 @@ function generateTextPoints(){
     return;
   }
 
-  // Тримаємо більше сердечок у M та 60% у нижньому тексті для кращої читабельності
+  // Трохи більше сердечок у V/M, але більшість лишається на words
   const total=hearts.length;
-  const vCount=Math.round(total*0.12);
-  const mCount=Math.round(total*0.20);
+  const vCount=Math.round(total*0.16);
+  const mCount=Math.round(total*0.24);
   const wordCount=total-vCount-mCount;
 
   targets.push(...assignFromPool(vPoints,vCount,3.1,0.19));
@@ -408,6 +476,34 @@ Events.on(render,"afterRender",()=>{
 let lastShake=0;
 
 function updateTextMode(){
+  if(resetMode==="gather"){
+    let settled=0;
+    for(const h of hearts){
+      const px=h.body.position.x;
+      const py=h.body.position.y;
+      const nx=px+(centerX-px)*0.22;
+      const ny=py+(centerY-py)*0.22;
+      Body.setPosition(h.body,{x:nx,y:ny});
+      Body.setVelocity(h.body,{x:0,y:0});
+      Body.setAngularVelocity(h.body,0);
+      h.targetDrawScale=0.22;
+
+      const dx=centerX-nx;
+      const dy=centerY-ny;
+      if(dx*dx+dy*dy<18*18) settled++;
+    }
+
+    if(settled>=Math.max(1,Math.floor(hearts.length*0.88)) || performance.now()-resetGatherStartedAt>700){
+      triggerExplosion();
+    }
+    return;
+  }
+
+  if(resetMode==="explode"){
+    cleanupExplodedHearts();
+    return;
+  }
+
   if(!textMode) return;
 
   // плавно підтягувати до цілей, без залежності від devicemotion
@@ -466,8 +562,12 @@ function motion(e){
 }
 
 window.addEventListener("pointerdown",()=>{
-  window.addEventListener("devicemotion",motion,{passive:true});
-},{once:true});
+  if(!window.__motionBound){
+    window.addEventListener("devicemotion",motion,{passive:true});
+    window.__motionBound=true;
+  }
+  startResetSequence();
+});
 
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
