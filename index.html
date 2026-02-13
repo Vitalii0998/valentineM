@@ -37,7 +37,7 @@ engine.enableSleeping=true;
 
 const w=stage.clientWidth;
 const h=stage.clientHeight;
-const DPR=Math.min(window.devicePixelRatio||1,2);
+const DPR=Math.min(window.devicePixelRatio||1,3);
 
 const render=Render.create({
   element:stage,
@@ -115,25 +115,37 @@ let textMode=false;
 let textPoints=[];
 let targets=[];
 
-const NORMAL_HEART_RADIUS=4.5;
+const NORMAL_HEART_RADIUS=7.1;
 const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=3200;
+const MAX_HEARTS=2200;
 const SHAKE_SPAWN_BURST=28;
 const KEYBOARD_SPAWN_BURST=22;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
-  const key=Math.max(4,Math.round(size));
+  const key=Math.max(3,Math.round(size));
   if(heartSpriteCache.has(key)) return heartSpriteCache.get(key);
   const c=document.createElement("canvas");
-  const pad=3;
+  const pad=4;
   c.width=key+pad*2;
   c.height=key+pad*2;
   const cctx=c.getContext("2d");
-  cctx.textAlign="center";
-  cctx.textBaseline="middle";
-  cctx.font=key+"px system-ui, Apple Color Emoji";
-  cctx.fillText("❤️",c.width/2,c.height/2+0.5);
+  const cx=c.width/2;
+  const cy=c.height/2+0.2;
+  const s=key/18;
+
+  cctx.beginPath();
+  cctx.moveTo(cx,cy+7*s);
+  cctx.bezierCurveTo(cx-8*s,cy+1*s,cx-8*s,cy-4*s,cx,cy-1*s);
+  cctx.bezierCurveTo(cx+8*s,cy-4*s,cx+8*s,cy+1*s,cx,cy+7*s);
+  cctx.closePath();
+
+  cctx.fillStyle="#ff295f";
+  cctx.fill();
+  cctx.lineWidth=Math.max(0.8,1.2*s);
+  cctx.strokeStyle="rgba(255,255,255,0.45)";
+  cctx.stroke();
+
   heartSpriteCache.set(key,c);
   return c;
 }
@@ -381,7 +393,7 @@ Events.on(render,"afterRender",()=>{
     ctx.translate(p.x,p.y);
     ctx.rotate(hrt.body.angle);
     hrt.drawScale += (hrt.targetDrawScale-hrt.drawScale)*0.16;
-    const glyphSize=Math.max(3,hrt.r*2*hrt.drawScale);
+    const glyphSize=Math.max(2.6,hrt.r*2*hrt.drawScale);
     const sprite=getHeartSprite(glyphSize);
     ctx.drawImage(sprite,-sprite.width/2,-sprite.height/2);
     ctx.restore();
@@ -465,7 +477,3 @@ for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
-
-
-
-
