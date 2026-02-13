@@ -154,7 +154,7 @@ function enterTextMode(){
 function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
-  const r = 5.2 + Math.random()*2.8;
+  const r = 6.4;
   const pos = randomInside();
 
   const body = Bodies.circle(pos.x,pos.y,r,{
