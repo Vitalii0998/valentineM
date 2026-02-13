@@ -113,9 +113,9 @@ let textMode=false;
 let textPoints=[];
 let targets=[];
 
-const NORMAL_HEART_RADIUS=5;
-const TEXT_MODE_TRIGGER=700;
-const MAX_HEARTS=2500;
+const NORMAL_HEART_RADIUS=7.1;
+const TEXT_MODE_TRIGGER=760;
+const MAX_HEARTS=2200;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -208,7 +208,7 @@ function generateTextPoints(){
   off.height=h;
   const ctx=off.getContext("2d");
 
-  const step=3;
+  const step=2;
 
   function collectTextPoints(text,font,x,y){
     ctx.clearRect(0,0,w,h);
@@ -330,17 +330,17 @@ function generateTextPoints(){
 
   // Тримаємо більше сердечок у M та 60% у нижньому тексті для кращої читабельності
   const total=hearts.length;
-  const vCount=Math.round(total*0.14);
-  const mCount=Math.round(total*0.22);
+  const vCount=Math.round(total*0.13);
+  const mCount=Math.round(total*0.21);
   const wordCount=total-vCount-mCount;
 
   targets.push(...assignFromPool(vPoints,vCount,3.1,0.19));
   targets.push(...assignFromPool(mPoints,mCount,3.1,0.19));
 
-  const wordTopCount=Math.round(wordCount*0.62);
+  const wordTopCount=Math.round(wordCount*0.60);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.24,0.105));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.20,0.095));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.16,0.095));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.085));
 
   shuffle(targets);
 }
@@ -459,4 +459,3 @@ for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
-
