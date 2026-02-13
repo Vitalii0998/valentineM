@@ -177,25 +177,56 @@ function generateTextPoints(){
   off.width=w;
   off.height=h;
   const ctx=off.getContext("2d");
-
   ctx.clearRect(0,0,w,h);
+
+  // 1) знайдемо межі внутрішньої області серця по сітці
+  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+
+  for(let y=0;y<h;y+=6){
+    for(let x=0;x<w;x+=6){
+      if(pointInsideHeart(x,y)){
+        if(x<minX) minX=x;
+        if(x>maxX) maxX=x;
+        if(y<minY) minY=y;
+        if(y>maxY) maxY=y;
+      }
+    }
+  }
+
+  // зробимо відступи всередину, щоб текст точно не торкався контуру
+  const padX = (maxX-minX)*0.12;
+  const padY = (maxY-minY)*0.12;
+
+  const innerMinX = minX + padX;
+  const innerMaxX = maxX - padX;
+  const innerMinY = minY + padY;
+  const innerMaxY = maxY - padY;
+
+  const innerW = innerMaxX - innerMinX;
+  const innerH = innerMaxY - innerMinY;
+
+  // 2) задаємо точки для букв всередині цієї області
+  const xL = innerMinX + innerW*0.30; // ліва частина
+  const xR = innerMinX + innerW*0.70; // права частина
+  const yTop = innerMinY + innerH*0.36;
+  const yBottom = innerMinY + innerH*0.72;
+
   ctx.fillStyle="white";
   ctx.textAlign="center";
   ctx.textBaseline="middle";
 
-  // позиції відносно розміру серця
-  const xL = centerX - scale*6.0;
-  const xR = centerX + scale*6.0;
-  const yTop = centerY - scale*2.0;
-  const yBottom = centerY + scale*6.0;
+  // шрифт масштабуємо від innerW/innerH
+  const big = Math.round(Math.min(innerW, innerH)*0.22);
+  const mid = Math.round(Math.min(innerW, innerH)*0.13);
 
-  ctx.font=`900 ${Math.round(scale*3.8)}px Arial`;
+  ctx.font=`900 ${big}px Arial`;
   ctx.fillText("V", xL, yTop);
   ctx.fillText("M", xR, yTop);
 
-  ctx.font=`900 ${Math.round(scale*2.6)}px Arial`;
-  ctx.fillText("Valentine", centerX, yBottom);
+  ctx.font=`900 ${mid}px Arial`;
+  ctx.fillText("Valentine", (innerMinX+innerMaxX)/2, yBottom);
 
+  // 3) знімаємо точки тексту, але тільки ті, що всередині серця
   const data=ctx.getImageData(0,0,w,h).data;
 
   textPoints=[];
@@ -319,3 +350,4 @@ for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
+
