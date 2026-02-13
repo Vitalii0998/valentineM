@@ -133,11 +133,17 @@ const body = Bodies.circle(pos.x,pos.y,r,{
   hearts.push({body,r});
 
   // 🔥 активація тексту
-  if(hearts.length>200 && !textMode){
-    textMode=true;
-    generateTextPoints();
-  }
+if(hearts.length>200 && !textMode){
+  textMode=true;
+  generateTextPoints();
 
+  // 🔥 одразу вимикаємо колізії і гасимо швидкість
+  for(const h of hearts){
+    h.body.collisionFilter.mask = 0;
+    Body.setVelocity(h.body,{x:0,y:0});
+    Body.setAngularVelocity(h.body,0);
+  }
+}
   // 🔥 ліміт частинок (завжди поза textMode)
   if(hearts.length>700){
     Composite.remove(engine.world,hearts.shift().body);
@@ -245,21 +251,14 @@ if(textMode){
 
     const dx = t.x - h.body.position.x;
     const dy = t.y - h.body.position.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
 
-    // якщо ще не дійшли до точки
-    if(dist > 5){
+    Body.setPosition(h.body,{
+      x: h.body.position.x + dx * 0.1,
+      y: h.body.position.y + dy * 0.1
+    });
 
-      Body.setVelocity(h.body,{
-        x: dx * 0.05,
-        y: dy * 0.05
-      });
-
-    } else {
-      // 🔥 коли дійшли — фіксуємо
-      Body.setPosition(h.body, t);
-      Body.setVelocity(h.body,{x:0,y:0});
-      Body.setStatic(h.body,true);
+    if(Math.abs(dx) < 2 && Math.abs(dy) < 2){
+      Body.setPosition(h.body,t);
     }
   }
 
@@ -297,6 +296,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
