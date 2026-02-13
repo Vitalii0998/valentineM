@@ -271,24 +271,31 @@ function generateTextPoints(){
     return out;
   }
 
-  // Розкладка як на референсі: V ліворуч, M праворуч, "valentine" внизу по центру
+  // Розкладка: V ліворуч, M праворуч, знизу "valentine's" і під ним по центру "day"
   const xL=centerX-scale*4.8;
   const xR=centerX+scale*4.8;
   const yTop=centerY-scale*1.5;
-  const yBottom=centerY+scale*4.9;
+  const yWordTop=centerY+scale*4.2;
+  const yWordBottom=yWordTop+scale*2.2;
 
   const fontVM=`900 ${Math.round(scale*4.2)}px Arial`;
-  const fontWord=`900 ${Math.round(scale*2.9)}px Arial`;
+  const fontWordTop=`900 ${Math.round(scale*2.45)}px Arial`;
+  const fontWordBottom=`900 ${Math.round(scale*2.2)}px Arial`;
 
   const vGlyph=collectTextPoints("V",fontVM,xL,yTop);
   const mGlyph=collectTextPoints("M",fontVM,xR,yTop);
-  const wordGlyph=collectTextPoints("valentine",fontWord,centerX,yBottom);
+  const wordTopGlyph=collectTextPoints("valentine's",fontWordTop,centerX,yWordTop);
+  const wordBottomGlyph=collectTextPoints("day",fontWordBottom,centerX,yWordBottom);
 
   const vPoints=ensurePool(vGlyph,()=>buildVPoints(xL,yTop,scale*1.55));
   const mPoints=ensurePool(mGlyph,()=>buildMPoints(xR,yTop,scale*1.45));
-  const wordPoints=wordGlyph.length>=28
-    ? wordGlyph
-    : sampleLine(centerX-scale*4.5,yBottom,centerX+scale*4.5,yBottom,180);
+  const wordTopPoints=wordTopGlyph.length>=28
+    ? wordTopGlyph
+    : sampleLine(centerX-scale*5.2,yWordTop,centerX+scale*5.2,yWordTop,210);
+  const wordBottomPoints=wordBottomGlyph.length>=14
+    ? wordBottomGlyph
+    : sampleLine(centerX-scale*1.8,yWordBottom,centerX+scale*1.8,yWordBottom,90);
+  const wordPoints=[...wordTopPoints,...wordBottomPoints];
 
   textPoints=[...vPoints,...mPoints,...wordPoints];
 
@@ -306,7 +313,11 @@ function generateTextPoints(){
 
   targets.push(...assignFromPool(vPoints,vCount));
   targets.push(...assignFromPool(mPoints,mCount));
-  targets.push(...assignFromPool(wordPoints.length?wordPoints:textPoints,wordCount));
+
+  const wordTopCount=Math.round(wordCount*0.72);
+  const wordBottomCount=wordCount-wordTopCount;
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount));
 
   shuffle(targets);
 }
