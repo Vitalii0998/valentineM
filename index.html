@@ -118,30 +118,31 @@ function randomInside(){
 }
 
 function spawn(){
-  const r=6+Math.random()*3;
-  const pos=randomInside();
+  const r = 6 + Math.random()*3;
+  const pos = randomInside();
 
-  const body=Bodies.circle(pos.x,pos.y,r,{
+  const body = Bodies.circle(pos.x,pos.y,r,{
     restitution:0.05,
     friction:0.15,
     frictionAir:0.001,
     density:0.003,
-    render:{visible:false}
+    render:{visible:false},
+    collisionFilter:{
+      category:0x0002,
+      mask:0x0001
+    }
   });
 
   Composite.add(engine.world,body);
   hearts.push({body,r});
 
-if(hearts.length>200 && !textMode){
-  textMode=true;
-  generateTextPoints();
+  // 🔥 активація тексту
+  if(hearts.length>200 && !textMode){
+    textMode=true;
+    generateTextPoints();
+  }
 
-  // 🔥 вимикаємо колізії між частинками
-for(const h of hearts){
-  h.body.collisionFilter.category = 0x0002;
-  h.body.collisionFilter.mask = 0x0001;
-}
-
+  // 🔥 ліміт частинок (завжди поза textMode)
   if(hearts.length>700){
     Composite.remove(engine.world,hearts.shift().body);
   }
@@ -287,6 +288,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
