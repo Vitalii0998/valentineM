@@ -50,6 +50,14 @@ const render=Render.create({
 
 Render.run(render);
 Runner.run(Runner.create(),engine);
+const pad = 60;
+const bounds = [
+  Bodies.rectangle(w/2, -pad/2, w+2*pad, pad, {isStatic:true}),        // top
+  Bodies.rectangle(w/2, h+pad/2, w+2*pad, pad, {isStatic:true}),       // bottom
+  Bodies.rectangle(-pad/2, h/2, pad, h+2*pad, {isStatic:true}),        // left
+  Bodies.rectangle(w+pad/2, h/2, pad, h+2*pad, {isStatic:true}),       // right
+];
+Composite.add(engine.world, bounds);
 
 // ---------------- HEART SHAPE ----------------
 
@@ -77,6 +85,9 @@ function pointInsideHeart(x,y){
 const pts=heartPoints(centerX,centerY,scale);
 
 // фізичні стінки
+const WALL_THICK = 40;   // було 25
+const WALL_OVERLAP = 60; // додаткове перекриття по довжині
+
 for(let i=0;i<pts.length;i++){
   const a=pts[i];
   const b=pts[(i+1)%pts.length];
@@ -88,21 +99,27 @@ for(let i=0;i<pts.length;i++){
   const wall=Bodies.rectangle(
     (a.x+b.x)/2,
     (a.y+b.y)/2,
-    len+25,
-    25,
-    {
-      isStatic:true,
-      collisionFilter:{ category:0x0001 }
-    }
+    len + WALL_OVERLAP,     // перекриття
+    WALL_THICK,             // товщина
+    { isStatic:true }
   );
 
   Body.setAngle(wall,angle);
   Composite.add(engine.world,wall);
 }
-
 // ---------------- PARTICLES ----------------
 
 const hearts=[];
+const MAX_V = 12;
+
+Events.on(engine, "beforeUpdate", () => {
+  for (const h of hearts) {
+    const v = h.body.velocity;
+    const speed = Math.hypot(v.x, v.y);
+    if (speed > MAX_V) {
+      Body.setVelocity(h.body, { x: v.x * (MAX_V / speed), y: v.y * (MAX_V / speed) });
+    }
+  }
 let textMode=false;
 let textPoints=[];
 let targets=[];
@@ -350,4 +367,5 @@ for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
+
 
