@@ -127,10 +127,15 @@ function spawn(){
   Composite.add(engine.world,body);
   hearts.push({body,r});
 
-  if(hearts.length>180 && !textMode){
-    textMode=true;
-    generateTextPoints();
+if(hearts.length>200 && !textMode){
+  textMode=true;
+  generateTextPoints();
+
+  // 🔥 вимикаємо колізії між частинками
+  for(const h of hearts){
+    h.body.collisionFilter.group = -1;
   }
+}
 
   if(hearts.length>700){
     Composite.remove(engine.world,hearts.shift().body);
@@ -223,23 +228,25 @@ function motion(e){
   const now=Date.now();
 
   // TEXT MODE
-  if(textMode){
+if(textMode){
 
-    engine.gravity.x=0;
-    engine.gravity.y=0;
+  engine.gravity.x = 0;
+  engine.gravity.y = 0;
 
-    for(let i=0;i<hearts.length;i++){
-      const h=hearts[i];
-      const t=targets[i];
-      if(!t) continue;
+  for(let i=0;i<hearts.length;i++){
+    const h = hearts[i];
+    const t = targets[i];
+    if(!t) continue;
 
-      const dx=t.x-h.body.position.x;
-      const dy=t.y-h.body.position.y;
+    const dx = t.x - h.body.position.x;
+    const dy = t.y - h.body.position.y;
 
-      Body.applyForce(h.body,h.body.position,{
-        x:dx*0.00015,
-        y:dy*0.00015
-      });
+    // 🔥 сильний магніт
+    Body.setVelocity(h.body,{
+      x: dx * 0.15,
+      y: dy * 0.15
+    });
+  }
 
       Body.setVelocity(h.body,{
         x:h.body.velocity.x*0.85,
@@ -281,4 +288,5 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
