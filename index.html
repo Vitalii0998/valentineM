@@ -178,53 +178,86 @@ function generateTextPoints(){
   off.height=h;
   const ctx=off.getContext("2d");
 
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle="white";
-  ctx.textAlign="center";
-  ctx.textBaseline="middle";
+  const step=4;
 
-  // Розкладка як на референсі: V ліворуч, M праворуч, "valentine" по центру нижче
-  const xL = centerX - scale*6.0;
-  const xR = centerX + scale*6.0;
-  const yTop = centerY - scale*2.1;
-  const yBottom = centerY + scale*5.4;
+  function collectTextPoints(text,font,x,y){
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle="white";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.font=font;
+    ctx.fillText(text,x,y);
 
-  ctx.font=`900 ${Math.round(scale*3.8)}px Arial`;
-  ctx.fillText("V", xL, yTop);
-  ctx.fillText("M", xR, yTop);
-
-  ctx.font=`900 ${Math.round(scale*2.8)}px Arial`;
-  ctx.fillText("valentine", centerX, yBottom);
-
-  const data=ctx.getImageData(0,0,w,h).data;
-
-  textPoints=[];
-  for(let y=0;y<h;y+=4){
-    for(let x=0;x<w;x+=4){
-      const i=(y*w+x)*4;
-      if(data[i+3]>150 && pointInsideHeart(x,y)){
-        textPoints.push({x,y});
+    const data=ctx.getImageData(0,0,w,h).data;
+    const points=[];
+    for(let py=0;py<h;py+=step){
+      for(let px=0;px<w;px+=step){
+        const i=(py*w+px)*4;
+        if(data[i+3]>150 && pointInsideHeart(px,py)){
+          points.push({x:px,y:py});
+        }
       }
     }
+    return shuffle(points);
   }
 
-  shuffle(textPoints);
+  // Розкладка як на референсі: V ліворуч, M праворуч, "valentine" внизу по центру
+  const xL=centerX-scale*6.0;
+  const xR=centerX+scale*6.0;
+  const yTop=centerY-scale*2.1;
+  const yBottom=centerY+scale*5.4;
+
+  const fontVM=`900 ${Math.round(scale*3.8)}px Arial`;
+  const fontWord=`900 ${Math.round(scale*2.8)}px Arial`;
+
+  const vPoints=collectTextPoints("V",fontVM,xL,yTop);
+  const mPoints=collectTextPoints("M",fontVM,xR,yTop);
+  const wordPoints=collectTextPoints("valentine",fontWord,centerX,yBottom);
+
+  textPoints=[...vPoints,...mPoints,...wordPoints];
 
   targets=[];
-
-  // якщо текстових пікселів мало/нема (рідкісний випадок шрифтів),
-  // даємо кожному сердечку fallback-ціль всередині серця, а не видаляємо їх
   if(textPoints.length===0){
-    for(let i=0;i<hearts.length;i++){
-      targets[i]=randomInside();
-    }
+    for(let i=0;i<hearts.length;i++) targets[i]=randomInside();
     return;
   }
 
-  for(let i=0;i<hearts.length;i++){
-    targets[i]=textPoints[i%textPoints.length];
+  // Явно розподіляємо сердечка між V/M/словом, щоб не злипалося в один центр
+  const total=hearts.length;
+  let vCount=Math.round(total*0.22);
+  let mCount=Math.round(total*0.22);
+  let wordCount=total-vCount-mCount;
+
+  if(vCount>vPoints.length){
+    const extra=vCount-vPoints.length;
+    vCount=vPoints.length;
+    wordCount+=extra;
   }
+  if(mCount>mPoints.length){
+    const extra=mCount-mPoints.length;
+    mCount=mPoints.length;
+    wordCount+=extra;
+  }
+  if(wordCount>wordPoints.length){
+    const overflow=wordCount-wordPoints.length;
+    wordCount=wordPoints.length;
+    const addV=Math.min(overflow,vPoints.length-vCount);
+    vCount+=addV;
+    mCount+=Math.min(overflow-addV,mPoints.length-mCount);
+  }
+
+  for(let i=0;i<vCount;i++) targets.push(vPoints[i%Math.max(1,vPoints.length)]);
+  for(let i=0;i<mCount;i++) targets.push(mPoints[i%Math.max(1,mPoints.length)]);
+  for(let i=0;i<wordCount;i++) targets.push(wordPoints[i%Math.max(1,wordPoints.length)]);
+
+  // якщо якоїсь групи точок замало, добиваємо загальним пулом
+  while(targets.length<total){
+    targets.push(textPoints[targets.length%textPoints.length]);
+  }
+
+  shuffle(targets);
 }
+
 
 // ---------------- RENDER ----------------
 
