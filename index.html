@@ -237,23 +237,30 @@ if(textMode){
   engine.gravity.x = 0;
   engine.gravity.y = 0;
 
-  // 🔥 вимикаємо колізії тільки після заповнення
-  for(const h of hearts){
-    h.body.collisionFilter.mask = 0;
-  }
-
   for(let i=0;i<hearts.length;i++){
+
     const h = hearts[i];
     const t = targets[i];
     if(!t) continue;
 
     const dx = t.x - h.body.position.x;
     const dy = t.y - h.body.position.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
 
-    Body.setVelocity(h.body,{
-      x: dx * 0.2,
-      y: dy * 0.2
-    });
+    // якщо ще не дійшли до точки
+    if(dist > 5){
+
+      Body.setVelocity(h.body,{
+        x: dx * 0.05,
+        y: dy * 0.05
+      });
+
+    } else {
+      // 🔥 коли дійшли — фіксуємо
+      Body.setPosition(h.body, t);
+      Body.setVelocity(h.body,{x:0,y:0});
+      Body.setStatic(h.body,true);
+    }
   }
 
   return;
@@ -290,6 +297,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
