@@ -209,16 +209,18 @@ function generateTextPoints(){
   shuffle(textPoints);
 
   targets=[];
-  const count=Math.min(hearts.length,textPoints.length);
-  for(let i=0;i<count;i++){
-    targets[i]=textPoints[i];
+
+  // якщо текстових пікселів мало/нема (рідкісний випадок шрифтів),
+  // даємо кожному сердечку fallback-ціль всередині серця, а не видаляємо їх
+  if(textPoints.length===0){
+    for(let i=0;i<hearts.length;i++){
+      targets[i]=randomInside();
+    }
+    return;
   }
 
-  // якщо сердечок більше, ніж цілей тексту — зайві прибираємо,
-  // інакше вони залишаються без target та "відлітають" за інерцією
-  while(hearts.length>count){
-    const extra=hearts.pop();
-    Composite.remove(engine.world,extra.body);
+  for(let i=0;i<hearts.length;i++){
+    targets[i]=textPoints[i%textPoints.length];
   }
 }
 
