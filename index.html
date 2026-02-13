@@ -355,11 +355,18 @@ function motion(e){
     }
   }
 
-  const g=e.accelerationIncludingGravity;
-  if(g){
-    engine.gravity.x=-(g.x||0)/10;
-    engine.gravity.y=(g.y||0)/10;
-  }
+const g = e.accelerationIncludingGravity;
+if (g) {
+  let gx = (g.x || 0) / 10;
+  let gy = -(g.y || 0) / 10;
+
+  // обмежимо, щоб не “вистрілювало”
+  gx = Math.max(-1, Math.min(1, gx));
+  gy = Math.max(-1, Math.min(1, gy));
+
+  engine.gravity.x = gx;
+  engine.gravity.y = gy;
+}
 }
 
 window.addEventListener("pointerdown",()=>{
@@ -377,3 +384,4 @@ for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
+
