@@ -146,6 +146,8 @@ function enterTextMode(){
 
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
+
+    h.targetDrawScale=0.58;
   }
 }
 
@@ -164,7 +166,7 @@ function spawn(){
   });
 
   Composite.add(engine.world,body);
-  hearts.push({body,r});
+  hearts.push({body,r,drawScale:1,targetDrawScale:1});
 
   if(hearts.length>200 && !textMode){
     enterTextMode();
@@ -340,7 +342,9 @@ Events.on(render,"afterRender",()=>{
     ctx.save();
     ctx.translate(p.x,p.y);
     ctx.rotate(hrt.body.angle);
-    ctx.font=(hrt.r*2)+"px system-ui, Apple Color Emoji";
+    hrt.drawScale += (hrt.targetDrawScale-hrt.drawScale)*0.16;
+    const glyphSize=Math.max(8,hrt.r*2*hrt.drawScale);
+    ctx.font=glyphSize+"px system-ui, Apple Color Emoji";
     ctx.fillText("❤️",0,0);
     ctx.restore();
   }
@@ -368,6 +372,8 @@ function updateTextMode(){
     Body.setPosition(h.body,{x:nx,y:ny});
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
+
+    h.targetDrawScale=0.58;
 
     const dx=t.x-nx;
     const dy=t.y-ny;
