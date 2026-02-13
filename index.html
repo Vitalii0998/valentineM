@@ -147,14 +147,14 @@ function enterTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.38;
+    h.targetDrawScale=0.34;
   }
 }
 
 function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
-  const r = 4 + Math.random()*2.2;
+  const r = 5.2 + Math.random()*2.8;
   const pos = randomInside();
 
   const body = Bodies.circle(pos.x,pos.y,r,{
@@ -168,11 +168,11 @@ function spawn(){
   Composite.add(engine.world,body);
   hearts.push({body,r,drawScale:1,targetDrawScale:1});
 
-  if(hearts.length>320 && !textMode){
+  if(hearts.length>420 && !textMode){
     enterTextMode();
   }
 
-  if(hearts.length>1100){
+  if(hearts.length>1400){
     Composite.remove(engine.world,hearts.shift().body);
   }
 }
@@ -343,7 +343,7 @@ Events.on(render,"afterRender",()=>{
     ctx.translate(p.x,p.y);
     ctx.rotate(hrt.body.angle);
     hrt.drawScale += (hrt.targetDrawScale-hrt.drawScale)*0.16;
-    const glyphSize=Math.max(6,hrt.r*2*hrt.drawScale);
+    const glyphSize=Math.max(5,hrt.r*2*hrt.drawScale);
     ctx.font=glyphSize+"px system-ui, Apple Color Emoji";
     ctx.fillText("❤️",0,0);
     ctx.restore();
@@ -373,7 +373,7 @@ function updateTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.38;
+    h.targetDrawScale=0.34;
 
     const dx=t.x-nx;
     const dy=t.y-ny;
