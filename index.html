@@ -154,7 +154,7 @@ function enterTextMode(){
 function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
-  const r = 6 + Math.random()*3;
+  const r = 4 + Math.random()*2.2;
   const pos = randomInside();
 
   const body = Bodies.circle(pos.x,pos.y,r,{
@@ -168,11 +168,11 @@ function spawn(){
   Composite.add(engine.world,body);
   hearts.push({body,r,drawScale:1,targetDrawScale:1});
 
-  if(hearts.length>200 && !textMode){
+  if(hearts.length>320 && !textMode){
     enterTextMode();
   }
 
-  if(hearts.length>700){
+  if(hearts.length>1100){
     Composite.remove(engine.world,hearts.shift().body);
   }
 }
@@ -300,9 +300,9 @@ function generateTextPoints(){
 
   // Тримаємо помітну частку в лівій/правій буквах, щоб центр не "з'їдав" усе
   const total=hearts.length;
-  let vCount=Math.round(total*0.30);
-  let mCount=Math.round(total*0.30);
-  let wordCount=total-vCount-mCount;
+  const vCount=Math.round(total*0.25);
+  const mCount=Math.round(total*0.25);
+  const wordCount=total-vCount-mCount;
 
   targets.push(...assignFromPool(vPoints,vCount));
   targets.push(...assignFromPool(mPoints,mCount));
