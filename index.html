@@ -69,8 +69,13 @@ const centerY=h/2;
 const scale=Math.min(w,h)*0.03;
 
 function pointInsideHeart(x,y){
-  const dx=(x-centerX)/scale;
-  const dy=(centerY-y)/scale;
+  // Формула серця нормалізована в діапазоні ~[-1..1],
+  // а наш контур будується параметрично з множником 16*scale.
+  // Тому перевірку "всередині" треба масштабувати так само,
+  // інакше майже всі точки вважались "зовні" та злипались у центрі.
+  const norm=16*scale;
+  const dx=(x-centerX)/norm;
+  const dy=(centerY-y)/norm;
   return Math.pow(dx*dx+dy*dy-1,3)-dx*dx*dy*dy*dy <= 0;
 }
 
@@ -201,15 +206,67 @@ function generateTextPoints(){
     return shuffle(points);
   }
 
-  function sideFallbackPoints(cx,cy,count,rx,ry){
+  function sampleLine(x1,y1,x2,y2,n){
     const pts=[];
-    for(let i=0;i<count;i++){
-      const a=(i/count)*Math.PI*2;
-      const x=cx+Math.cos(a)*rx;
-      const y=cy+Math.sin(a)*ry;
+    for(let i=0;i<n;i++){
+      const t=n===1?0:i/(n-1);
+      const x=x1+(x2-x1)*t;
+      const y=y1+(y2-y1)*t;
       if(pointInsideHeart(x,y)) pts.push({x,y});
     }
     return pts;
+  }
+
+  function buildVPoints(cx,cy,size){
+    return [
+      ...sampleLine(cx-size,cy-size*0.7,cx,cy+size,50),
+      ...sampleLine(cx+size,cy-size*0.7,cx,cy+size,50)
+    ];
+  }
+
+  function buildMPoints(cx,cy,size){
+    return [
+      ...sampleLine(cx-size,cy+size,cx-size,cy-size,42),
+      ...sampleLine(cx-size,cy-size,cx,cy+size*0.1,34),
+      ...sampleLine(cx,cy+size*0.1,cx+size,cy-size,34),
+      ...sampleLine(cx+size,cy-size,cx+size,cy+size,42)
+    ];
+  }
+
+  function ensurePool(pool,fallbackFactory){
+    const dedup=[];
+    const used=new Set();
+    for(const p of pool){
+      const k=((p.x|0)<<16)|(p.y|0);
+      if(!used.has(k)){
+        used.add(k);
+        dedup.push(p);
+      }
+    }
+    if(dedup.length>=24) return dedup;
+    return fallbackFactory();
+  }
+
+  function assignFromPool(pool,count){
+    const out=[];
+    if(pool.length===0){
+      for(let i=0;i<count;i++) out.push(randomInside());
+      return out;
+    }
+    for(let i=0;i<count;i++){
+      const base=pool[i%pool.length];
+      const rep=(i/pool.length)|0;
+      if(rep===0){
+        out.push(base);
+        continue;
+      }
+      const angle=i*0.63+rep*1.17;
+      const radius=Math.min(4,rep*0.55);
+      const x=base.x+Math.cos(angle)*radius;
+      const y=base.y+Math.sin(angle)*radius;
+      out.push(pointInsideHeart(x,y)?{x,y}:base);
+    }
+    return out;
   }
 
   // Розкладка як на референсі: V ліворуч, M праворуч, "valentine" внизу по центру
@@ -221,12 +278,15 @@ function generateTextPoints(){
   const fontVM=`900 ${Math.round(scale*4.2)}px Arial`;
   const fontWord=`900 ${Math.round(scale*2.9)}px Arial`;
 
-  let vPoints=collectTextPoints("V",fontVM,xL,yTop);
-  let mPoints=collectTextPoints("M",fontVM,xR,yTop);
-  const wordPoints=collectTextPoints("valentine",fontWord,centerX,yBottom);
+  const vGlyph=collectTextPoints("V",fontVM,xL,yTop);
+  const mGlyph=collectTextPoints("M",fontVM,xR,yTop);
+  const wordGlyph=collectTextPoints("valentine",fontWord,centerX,yBottom);
 
-  if(vPoints.length<20) vPoints=sideFallbackPoints(xL,yTop,80,scale*1.5,scale*1.2);
-  if(mPoints.length<20) mPoints=sideFallbackPoints(xR,yTop,80,scale*1.5,scale*1.2);
+  const vPoints=ensurePool(vGlyph,()=>buildVPoints(xL,yTop,scale*1.55));
+  const mPoints=ensurePool(mGlyph,()=>buildMPoints(xR,yTop,scale*1.45));
+  const wordPoints=wordGlyph.length>=28
+    ? wordGlyph
+    : sampleLine(centerX-scale*4.5,yBottom,centerX+scale*4.5,yBottom,180);
 
   textPoints=[...vPoints,...mPoints,...wordPoints];
 
@@ -242,14 +302,9 @@ function generateTextPoints(){
   let mCount=Math.round(total*0.30);
   let wordCount=total-vCount-mCount;
 
-  for(let i=0;i<vCount;i++) targets.push(vPoints[i%vPoints.length]);
-  for(let i=0;i<mCount;i++) targets.push(mPoints[i%mPoints.length]);
-
-  if(wordPoints.length>0){
-    for(let i=0;i<wordCount;i++) targets.push(wordPoints[i%wordPoints.length]);
-  }else{
-    for(let i=0;i<wordCount;i++) targets.push(textPoints[(i+vCount+mCount)%textPoints.length]);
-  }
+  targets.push(...assignFromPool(vPoints,vCount));
+  targets.push(...assignFromPool(mPoints,mCount));
+  targets.push(...assignFromPool(wordPoints.length?wordPoints:textPoints,wordCount));
 
   shuffle(targets);
 }
