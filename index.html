@@ -257,33 +257,39 @@ Events.on(render,"afterRender",()=>{
 
 let lastShake=0;
 
-function motion(e){
-  if(textMode){
-    // плавно підтягувати до цілей, без фізики швидкостей
-    for(let i=0;i<hearts.length;i++){
-      const h=hearts[i];
-      const t=targets[i];
-      if(!t) continue;
+function updateTextMode(){
+  if(!textMode) return;
 
-      const px=h.body.position.x;
-      const py=h.body.position.y;
+  // плавно підтягувати до цілей, без залежності від devicemotion
+  for(let i=0;i<hearts.length;i++){
+    const h=hearts[i];
+    const t=targets[i];
+    if(!t) continue;
 
-      const nx=px+(t.x-px)*0.18;
-      const ny=py+(t.y-py)*0.18;
+    const px=h.body.position.x;
+    const py=h.body.position.y;
 
-      Body.setPosition(h.body,{x:nx,y:ny});
+    const nx=px+(t.x-px)*0.18;
+    const ny=py+(t.y-py)*0.18;
+
+    Body.setPosition(h.body,{x:nx,y:ny});
+    Body.setVelocity(h.body,{x:0,y:0});
+    Body.setAngularVelocity(h.body,0);
+
+    const dx=t.x-nx;
+    const dy=t.y-ny;
+    if(dx*dx+dy*dy < 2.5*2.5){
+      Body.setPosition(h.body,t);
       Body.setVelocity(h.body,{x:0,y:0});
-      Body.setAngularVelocity(h.body,0);
-
-      const dx=t.x-nx, dy=t.y-ny;
-      if(dx*dx+dy*dy < 2.5*2.5){
-        Body.setPosition(h.body,t);
-        Body.setVelocity(h.body,{x:0,y:0});
-        Body.setStatic(h.body,true);
-      }
+      Body.setStatic(h.body,true);
     }
-    return;
   }
+}
+
+Events.on(engine,"beforeUpdate",updateTextMode);
+
+function motion(e){
+  if(textMode) return;
 
   // NORMAL MODE
   const now=Date.now();
