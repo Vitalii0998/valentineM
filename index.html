@@ -307,17 +307,17 @@ function generateTextPoints(){
 
   // Тримаємо більше сердечок у M та 60% у нижньому тексті для кращої читабельності
   const total=hearts.length;
-  const vCount=Math.round(total*0.16);
-  const mCount=Math.round(total*0.24);
+  const vCount=Math.round(total*0.15);
+  const mCount=Math.round(total*0.23);
   const wordCount=total-vCount-mCount;
 
   targets.push(...assignFromPool(vPoints,vCount,3.1,0.19));
   targets.push(...assignFromPool(mPoints,mCount,3.1,0.19));
 
-  const wordTopCount=Math.round(wordCount*0.66);
+  const wordTopCount=Math.round(wordCount*0.64);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.45,0.14));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.40,0.135));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.32,0.12));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.28,0.115));
 
   shuffle(targets);
 }
