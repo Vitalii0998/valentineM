@@ -118,11 +118,11 @@ let textMode=false;
 let textPoints=[];
 let targets=[];
 
-const NORMAL_HEART_RADIUS=7.1;
-const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=2200;
-const SHAKE_SPAWN_BURST=28;
-const KEYBOARD_SPAWN_BURST=22;
+const NORMAL_HEART_RADIUS=5.6;
+const TEXT_MODE_TRIGGER=1200;
+const MAX_HEARTS=3200;
+const SHAKE_SPAWN_BURST=34;
+const KEYBOARD_SPAWN_BURST=28;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -199,10 +199,10 @@ function spawn(){
   const pos = randomInside();
 
   const body = Bodies.circle(pos.x,pos.y,r,{
-    restitution:0.15,
-    friction:0.01,
+    restitution:0.05,
+    friction:0.03,
     frictionStatic:0,
-    frictionAir:0.00035,
+    frictionAir:0.0006,
     density:0.003,
     render:{visible:false}
   });
