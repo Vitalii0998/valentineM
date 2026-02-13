@@ -85,18 +85,17 @@ for(let i=0;i<pts.length;i++){
   const len=Math.hypot(dx,dy);
   const angle=Math.atan2(dy,dx);
 
-const wall=Bodies.rectangle(
-  (a.x+b.x)/2,
-  (a.y+b.y)/2,
-  len+25,
-  25,
-  {
-    isStatic:true,
-    collisionFilter:{
-      category:0x0001
+  const wall=Bodies.rectangle(
+    (a.x+b.x)/2,
+    (a.y+b.y)/2,
+    len+25,
+    25,
+    {
+      isStatic:true,
+      collisionFilter:{ category:0x0001 }
     }
-  }
-);
+  );
+
   Body.setAngle(wall,angle);
   Composite.add(engine.world,wall);
 }
@@ -117,28 +116,55 @@ function randomInside(){
   return {x,y};
 }
 
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=(Math.random()*(i+1))|0;
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function enterTextMode(){
+  textMode=true;
+  generateTextPoints();
+
+  // вимикаємо колізії і гравітацію для стабільного формування тексту
+  engine.gravity.x=0;
+  engine.gravity.y=0;
+
+  for(const h of hearts){
+    Body.setStatic(h.body,false);
+
+    // не колайдиться з іншими частинками і взагалі ні з чим (включно зі стінками)
+    h.body.collisionFilter.group = -1;
+    h.body.collisionFilter.mask = 0;
+
+    Body.setVelocity(h.body,{x:0,y:0});
+    Body.setAngularVelocity(h.body,0);
+  }
+}
+
 function spawn(){
+  if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
+
   const r = 6 + Math.random()*3;
   const pos = randomInside();
 
-const body = Bodies.circle(pos.x,pos.y,r,{
-  restitution:0.05,
-  friction:0.15,
-  frictionAir:0.001,
-  density:0.003,
-  render:{visible:false}
-});
+  const body = Bodies.circle(pos.x,pos.y,r,{
+    restitution:0.05,
+    friction:0.15,
+    frictionAir:0.001,
+    density:0.003,
+    render:{visible:false}
+  });
 
   Composite.add(engine.world,body);
   hearts.push({body,r});
 
-  // 🔥 активація тексту
   if(hearts.length>200 && !textMode){
-    textMode=true;
-    generateTextPoints();
+    enterTextMode();
   }
 
-  // 🔥 ліміт частинок (завжди поза textMode)
   if(hearts.length>700){
     Composite.remove(engine.world,hearts.shift().body);
   }
@@ -147,32 +173,34 @@ const body = Bodies.circle(pos.x,pos.y,r,{
 // ---------------- TEXT ----------------
 
 function generateTextPoints(){
-
   const off=document.createElement("canvas");
   off.width=w;
   off.height=h;
   const ctx=off.getContext("2d");
 
+  ctx.clearRect(0,0,w,h);
   ctx.fillStyle="white";
   ctx.textAlign="center";
   ctx.textBaseline="middle";
 
-  // V ліворуч
-  ctx.font="bold 90px Arial";
-  ctx.fillText("V", w/2 - 120, h/2 - 40);
+  // позиції відносно розміру серця
+  const xL = centerX - scale*6.0;
+  const xR = centerX + scale*6.0;
+  const yTop = centerY - scale*2.0;
+  const yBottom = centerY + scale*6.0;
 
-  // M праворуч
-  ctx.fillText("M", w/2 + 120, h/2 - 40);
+  ctx.font=`900 ${Math.round(scale*3.8)}px Arial`;
+  ctx.fillText("V", xL, yTop);
+  ctx.fillText("M", xR, yTop);
 
-  // Valentine знизу
-  ctx.font="bold 60px Arial";
-  ctx.fillText("Valentine", w/2, h/2 + 120);
+  ctx.font=`900 ${Math.round(scale*2.6)}px Arial`;
+  ctx.fillText("Valentine", centerX, yBottom);
 
   const data=ctx.getImageData(0,0,w,h).data;
 
   textPoints=[];
-  for(let y=0;y<h;y+=6){
-    for(let x=0;x<w;x+=6){
+  for(let y=0;y<h;y+=5){
+    for(let x=0;x<w;x+=5){
       const i=(y*w+x)*4;
       if(data[i+3]>150 && pointInsideHeart(x,y)){
         textPoints.push({x,y});
@@ -180,12 +208,14 @@ function generateTextPoints(){
     }
   }
 
+  shuffle(textPoints);
+
   targets=[];
-  for(let i=0;i<hearts.length;i++){
-    targets[i]=textPoints[i%textPoints.length];
+  const count=Math.min(hearts.length,textPoints.length);
+  for(let i=0;i<count;i++){
+    targets[i]=textPoints[i];
   }
 }
-
 
 // ---------------- RENDER ----------------
 
@@ -195,7 +225,7 @@ Events.on(render,"afterRender",()=>{
   // контур серця
   ctx.beginPath();
   ctx.moveTo(pts[0].x,pts[0].y);
-  for(let p of pts) ctx.lineTo(p.x,p.y);
+  for(const p of pts) ctx.lineTo(p.x,p.y);
   ctx.closePath();
 
   const grad=ctx.createLinearGradient(0,0,w,h);
@@ -217,7 +247,7 @@ Events.on(render,"afterRender",()=>{
     ctx.save();
     ctx.translate(p.x,p.y);
     ctx.rotate(hrt.body.angle);
-    ctx.font=hrt.r*2+"px system-ui, Apple Color Emoji";
+    ctx.font=(hrt.r*2)+"px system-ui, Apple Color Emoji";
     ctx.fillText("❤️",0,0);
     ctx.restore();
   }
@@ -228,50 +258,39 @@ Events.on(render,"afterRender",()=>{
 let lastShake=0;
 
 function motion(e){
+  if(textMode){
+    // плавно підтягувати до цілей, без фізики швидкостей
+    for(let i=0;i<hearts.length;i++){
+      const h=hearts[i];
+      const t=targets[i];
+      if(!t) continue;
 
-  const now=Date.now();
+      const px=h.body.position.x;
+      const py=h.body.position.y;
 
-  // TEXT MODE
-if(textMode){
+      const nx=px+(t.x-px)*0.18;
+      const ny=py+(t.y-py)*0.18;
 
-  engine.gravity.x = 0;
-  engine.gravity.y = 0;
-
-  for(let i=0;i<hearts.length;i++){
-
-    const h = hearts[i];
-    const t = targets[i];
-    if(!t) continue;
-
-    const dx = t.x - h.body.position.x;
-    const dy = t.y - h.body.position.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-
-    // якщо ще не дійшли до точки
-    if(dist > 5){
-
-      Body.setVelocity(h.body,{
-        x: dx * 0.05,
-        y: dy * 0.05
-      });
-
-    } else {
-      // 🔥 коли дійшли — фіксуємо
-      Body.setPosition(h.body, t);
+      Body.setPosition(h.body,{x:nx,y:ny});
       Body.setVelocity(h.body,{x:0,y:0});
-      Body.setStatic(h.body,true);
+      Body.setAngularVelocity(h.body,0);
+
+      const dx=t.x-nx, dy=t.y-ny;
+      if(dx*dx+dy*dy < 2.5*2.5){
+        Body.setPosition(h.body,t);
+        Body.setVelocity(h.body,{x:0,y:0});
+        Body.setStatic(h.body,true);
+      }
     }
+    return;
   }
 
-  return;
-}
-
   // NORMAL MODE
+  const now=Date.now();
 
   const a=e.acceleration||e.accelerationIncludingGravity;
   if(a){
     const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
-
     if(mag>14 && now-lastShake>200){
       lastShake=now;
       for(let i=0;i<20;i++) spawn();
@@ -294,12 +313,9 @@ window.addEventListener("keydown",e=>{
     for(let i=0;i<20;i++) spawn();
   }
 });
+
+// старт: можеш накидати трохи сердечок одразу
+for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
-
-
-
-
-
-
