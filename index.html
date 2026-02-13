@@ -213,6 +213,13 @@ function generateTextPoints(){
   for(let i=0;i<count;i++){
     targets[i]=textPoints[i];
   }
+
+  // якщо сердечок більше, ніж цілей тексту — зайві прибираємо,
+  // інакше вони залишаються без target та "відлітають" за інерцією
+  while(hearts.length>count){
+    const extra=hearts.pop();
+    Composite.remove(engine.world,extra.body);
+  }
 }
 
 // ---------------- RENDER ----------------
