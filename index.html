@@ -228,44 +228,31 @@
 
     // ---------------- MOTION ----------------
 
-    function motion(e){
-      const now = Date.now();
+function motion(e){
 
-      // TEXT MODE: no physics fighting, no collisions between hearts, move toward nearest text point
-      if(textMode){
-        engine.gravity.x = 0;
-        engine.gravity.y = 0;
+  const now = Date.now();
 
-        // disable heart-heart collisions, keep walls
-        for(const hrt of hearts){
-          hrt.body.collisionFilter.mask = WALL_CAT;
-        }
+  const g = e.accelerationIncludingGravity;
+  if(!g) return;
 
-        if(!textPoints.length) return;
+  const mag = Math.sqrt(
+    (g.x||0)**2 +
+    (g.y||0)**2 +
+    (g.z||0)**2
+  );
 
-        // simple stable assignment: map by index, but clamp inside textPoints
-        // (textPoints shuffled, so distribution looks organic)
-        for(let i=0;i<hearts.length;i++){
-          const hrt = hearts[i];
-          const t = textPoints[i % textPoints.length];
+  // 🔥 нижчий поріг
+  if(mag > 16 && now-lastShake > 250){
+    lastShake = now;
+    spawnBurst(20);
+  }
 
-          const dx = t.x - hrt.body.position.x;
-          const dy = t.y - hrt.body.position.y;
+  if(!textMode){
+    engine.gravity.x = -(g.x || 0) / 10;
+    engine.gravity.y =  (g.y || 0) / 10;
+  }
+}
 
-          // move fractionally (no velocity physics)
-          Body.setPosition(hrt.body, {
-            x: hrt.body.position.x + dx * 0.10,
-            y: hrt.body.position.y + dy * 0.10
-          });
-
-          // snap when close
-          if (dx*dx + dy*dy < 16) {
-            Body.setPosition(hrt.body, t);
-          }
-        }
-
-        return;
-      }
 
       // NORMAL MODE
       const a = e.acceleration || e.accelerationIncludingGravity;
@@ -284,9 +271,10 @@
       }
     }
 
-    window.addEventListener("pointerdown", ()=>{
-      window.addEventListener("devicemotion", motion, {passive:true});
-    }, {once:true});
+window.addEventListener("pointerdown", ()=>{
+  spawnBurst(20); // щоб ти одразу бачив що все працює
+  window.addEventListener("devicemotion", motion, {passive:true});
+}, {once:true});
 
     // Desktop test
     window.addEventListener("keydown", e=>{
@@ -295,3 +283,4 @@
   </script>
 </body>
 </html>
+
