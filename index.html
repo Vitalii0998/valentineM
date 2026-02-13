@@ -37,6 +37,7 @@ engine.enableSleeping=true;
 
 const w=stage.clientWidth;
 const h=stage.clientHeight;
+const DPR=Math.min(window.devicePixelRatio||1,2);
 
 const render=Render.create({
   element:stage,
@@ -45,7 +46,8 @@ const render=Render.create({
     width:w,
     height:h,
     wireframes:false,
-    background:"transparent"
+    background:"transparent",
+    pixelRatio:DPR
   }
 });
 
@@ -113,9 +115,11 @@ let textMode=false;
 let textPoints=[];
 let targets=[];
 
-const NORMAL_HEART_RADIUS=5;
+const NORMAL_HEART_RADIUS=7.1;
 const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=3000;
+const MAX_HEARTS=2200;
+const SHAKE_SPAWN_BURST=28;
+const KEYBOARD_SPAWN_BURST=22;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -433,9 +437,9 @@ function motion(e){
   const a=e.acceleration||e.accelerationIncludingGravity;
   if(a){
     const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
-    if(mag>14 && now-lastShake>200){
+    if(mag>12 && now-lastShake>140){
       lastShake=now;
-      for(let i=0;i<20;i++) spawn();
+      for(let i=0;i<SHAKE_SPAWN_BURST;i++) spawn();
     }
   }
 
@@ -452,7 +456,7 @@ window.addEventListener("pointerdown",()=>{
 
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
-    for(let i=0;i<20;i++) spawn();
+    for(let i=0;i<KEYBOARD_SPAWN_BURST;i++) spawn();
   }
 });
 
@@ -461,4 +465,3 @@ for(let i=0;i<40;i++) spawn();
 </script>
 </body>
 </html>
-
