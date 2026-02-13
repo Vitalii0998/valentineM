@@ -183,24 +183,22 @@ function generateTextPoints(){
   ctx.textAlign="center";
   ctx.textBaseline="middle";
 
-  // позиції відносно розміру серця
-  const xL = centerX - scale*6.0;
-  const xR = centerX + scale*6.0;
-  const yTop = centerY - scale*2.0;
-  const yBottom = centerY + scale*6.0;
+  // Текст тримаємо в центрі серця, щоб цілі не "сповзали" вниз на мобілках
+  const lineGap = scale*3.0;
+  const yTop = centerY - lineGap;
+  const yBottom = centerY + lineGap;
 
-  ctx.font=`900 ${Math.round(scale*3.8)}px Arial`;
-  ctx.fillText("V", xL, yTop);
-  ctx.fillText("M", xR, yTop);
+  ctx.font=`900 ${Math.round(scale*2.2)}px Arial`;
+  ctx.fillText("For My Valentine,", centerX, yTop);
 
   ctx.font=`900 ${Math.round(scale*2.6)}px Arial`;
-  ctx.fillText("Valentine", centerX, yBottom);
+  ctx.fillText("Marta", centerX, yBottom);
 
   const data=ctx.getImageData(0,0,w,h).data;
 
   textPoints=[];
-  for(let y=0;y<h;y+=5){
-    for(let x=0;x<w;x+=5){
+  for(let y=0;y<h;y+=4){
+    for(let x=0;x<w;x+=4){
       const i=(y*w+x)*4;
       if(data[i+3]>150 && pointInsideHeart(x,y)){
         textPoints.push({x,y});
