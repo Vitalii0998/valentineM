@@ -181,14 +181,18 @@ function pointInsideHeartWithMargin(x,y,margin=0){
     pointInsideHeart(x-m*0.7,y-m*0.7) &&
     pointInsideHeart(x+m*0.7,y-m*0.7) &&
     pointInsideHeart(x-m*0.7,y+m*0.7) &&
-    pointInsideHeart(x+m*0.7,y+m*0.7)
+    pointInsideHeart(x+m*0.7,y+m*0.7) &&
+    pointInsideHeart(x-m*0.45,y) &&
+    pointInsideHeart(x+m*0.45,y) &&
+    pointInsideHeart(x,y-m*0.45) &&
+    pointInsideHeart(x,y+m*0.45)
   );
 }
 
 function randomInside(margin=0){
   // Трохи вужчий первинний бокс + перевірка margin дає стабільно
   // спавн всередині серця без виходу за контур.
-  const spread=17.1;
+  const spread=16.2;
   let x,y;
   do{
     x=centerX+(Math.random()-0.5)*scale*spread;
@@ -349,7 +353,7 @@ function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
   const r = NORMAL_HEART_RADIUS;
-  const spawnMargin=r*1.05;
+  const spawnMargin=r*1.55;
   const pos = randomInside(spawnMargin);
 
   const body = Bodies.circle(pos.x,pos.y,r,{
