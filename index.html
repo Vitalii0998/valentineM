@@ -176,6 +176,21 @@ function shuffle(arr){
   return arr;
 }
 
+function moveBodyToward(body,tx,ty,gain,maxStep){
+  const px=body.position.x;
+  const py=body.position.y;
+  const dx=tx-px;
+  const dy=ty-py;
+  const dist=Math.hypot(dx,dy);
+  if(dist<0.0001) return {x:px,y:py,dist:0};
+
+  const step=Math.min(maxStep,Math.max(0.18,dist*gain));
+  const nx=px+(dx/dist)*step;
+  const ny=py+(dy/dist)*step;
+  Body.setPosition(body,{x:nx,y:ny});
+  return {x:nx,y:ny,dist};
+}
+
 function enterTextMode(){
   if(resetMode!=="idle") return;
   textMode=true;
@@ -196,6 +211,7 @@ function enterTextMode(){
     Body.setAngularVelocity(h.body,0);
 
     h.targetDrawScale=0.18;
+    h.textLocked=false;
   }
 }
 
@@ -217,6 +233,7 @@ function startResetSequence(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
     h.targetDrawScale=0.26;
+    h.textLocked=false;
   }
 }
 
@@ -296,7 +313,7 @@ function spawn(){
   });
 
   Composite.add(engine.world,body);
-  hearts.push({body,r,drawScale:1,targetDrawScale:1});
+  hearts.push({body,r,drawScale:1,targetDrawScale:1,textLocked:false});
 
   if(hearts.length>TEXT_MODE_TRIGGER && !textMode){
     enterTextMode();
@@ -499,17 +516,13 @@ function updateTextMode(){
   if(resetMode==="gather"){
     let settled=0;
     for(const h of hearts){
-      const px=h.body.position.x;
-      const py=h.body.position.y;
-      const nx=px+(centerX-px)*0.22;
-      const ny=py+(centerY-py)*0.22;
-      Body.setPosition(h.body,{x:nx,y:ny});
+      const moved=moveBodyToward(h.body,centerX,centerY,0.16,9.5);
       Body.setVelocity(h.body,{x:0,y:0});
       Body.setAngularVelocity(h.body,0);
       h.targetDrawScale=0.22;
 
-      const dx=centerX-nx;
-      const dy=centerY-ny;
+      const dx=centerX-moved.x;
+      const dy=centerY-moved.y;
       if(dx*dx+dy*dy<18*18) settled++;
     }
 
@@ -529,30 +542,31 @@ function updateTextMode(){
   // плавно підтягувати до цілей, без залежності від devicemotion
   for(let i=0;i<hearts.length;i++){
     const h=hearts[i];
-    if(h.body.isStatic) continue;
     const t=targets[i];
     if(!t) continue;
 
-    const px=h.body.position.x;
-    const py=h.body.position.y;
+    const drawScale=t.drawScale ?? 0.18;
+    const gain=drawScale<0.1 ? 0.22 : 0.16;
+    const maxStep=drawScale<0.1 ? 8.6 : 7.2;
 
-    const lerp=(t.drawScale ?? 0.18) < 0.1 ? 0.24 : 0.18;
-    const nx=px+(t.x-px)*lerp;
-    const ny=py+(t.y-py)*lerp;
+    const moved=moveBodyToward(h.body,t.x,t.y,gain,maxStep);
+    if(!h.textLocked || moved.dist>3.2){
+      Body.setVelocity(h.body,{x:0,y:0});
+      Body.setAngularVelocity(h.body,0);
+    }
 
-    Body.setPosition(h.body,{x:nx,y:ny});
-    Body.setVelocity(h.body,{x:0,y:0});
-    Body.setAngularVelocity(h.body,0);
+    h.targetDrawScale=drawScale;
 
-    h.targetDrawScale=t.drawScale ?? 0.18;
-
-    const dx=t.x-nx;
-    const dy=t.y-ny;
-    const settleDist=(t.drawScale ?? 0.18) < 0.1 ? 3.2 : 2.5;
+    const dx=t.x-moved.x;
+    const dy=t.y-moved.y;
+    const settleDist=drawScale < 0.1 ? 2.2 : 1.9;
     if(dx*dx+dy*dy < settleDist*settleDist){
       Body.setPosition(h.body,{x:t.x,y:t.y});
       Body.setVelocity(h.body,{x:0,y:0});
-      Body.setStatic(h.body,true);
+      Body.setAngularVelocity(h.body,0);
+      h.textLocked=true;
+    }else if(h.textLocked && dx*dx+dy*dy>5*5){
+      h.textLocked=false;
     }
   }
 }
