@@ -196,7 +196,7 @@ function pointInsideHeartWithMargin(x,y,margin=0){
 function randomInside(margin=0){
   // Трохи вужчий первинний бокс + перевірка margin дає стабільно
   // спавн всередині серця без виходу за контур.
-  const spread=14.8;
+  const spread=14.2;
   const maxAttempts=220;
 
   for(let i=0;i<maxAttempts;i++){
@@ -362,9 +362,9 @@ function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
   const r = NORMAL_HEART_RADIUS;
-  const spawnMargin=Math.max(r*2.6,9.8);
+  const spawnMargin=Math.max(r*3.2,13.5);
   const pos = randomInside(spawnMargin);
-  if(!pointInsideHeartWithMargin(pos.x,pos.y,spawnMargin)){
+  if(!pointInsideHeartWithMargin(pos.x,pos.y,spawnMargin*1.08)){
     pos.x=centerX;
     pos.y=centerY+scale*0.8;
   }
@@ -620,9 +620,11 @@ function mapGravityFromMotion(g){
     sy=-gy;
   }
 
-  // На iOS (Safari) вертикальна вісь здебільшого інвертована відносно Android.
+  // На iOS і Android знаки осей відрізняються.
+  // Для Android інвертуємо X, бо без цього нахил вліво/вправо дзеркалиться.
+  const xSign=IS_IOS?1:-1;
   const ySign=IS_IOS?-1:1;
-  return {x:sx/10,y:(sy*ySign)/10};
+  return {x:(sx*xSign)/10,y:(sy*ySign)/10};
 }
 
 function showMotionHint(msg){
