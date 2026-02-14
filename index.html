@@ -129,13 +129,19 @@ const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 const TEXT_FORCE_SNAP_MS=1400;
 
-const NORMAL_HEART_RADIUS=4.9;
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const IS_IPAD=/iPad/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const SHAKE_THRESHOLD=IS_IOS?9.5:12;
+
+const REFERENCE_AREA=390*844;
+const viewportArea=Math.max(1,w*h);
+const areaScale=Math.min(1.85,Math.max(1,Math.sqrt(viewportArea/REFERENCE_AREA)));
+
+const NORMAL_HEART_RADIUS=4.9*areaScale;
 const TEXT_MODE_TRIGGER=900;
 const MAX_HEARTS=2200;
 const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
-const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-const SHAKE_THRESHOLD=IS_IOS?9.5:12;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -591,6 +597,9 @@ Events.on(render,"afterRender",()=>{
 let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
+let iPadNeutralX=0;
+let iPadNeutralSamples=0;
+const IPAD_NEUTRAL_SAMPLE_COUNT=28;
 
 function getScreenAngle(){
   if(window.screen && window.screen.orientation && typeof window.screen.orientation.angle==="number"){
@@ -621,10 +630,28 @@ function mapGravityFromMotion(g){
   }
 
   // На iOS і Android знаки осей відрізняються.
-  // Для Android інвертуємо X, бо без цього нахил вліво/вправо дзеркалиться.
-  const xSign=IS_IOS?1:-1;
+  // На iPad інверсія X зазвичай така ж як на Android, тому віддзеркалюємо X.
+  const xSign=(IS_IOS && !IS_IPAD)?1:-1;
   const ySign=IS_IOS?-1:1;
-  return {x:(sx*xSign)/10,y:(sy*ySign)/10};
+
+  let x=(sx*xSign)/10;
+  const y=(sy*ySign)/10;
+
+  // На iPad часто є сталий зсув по X (тягне вліво/вправо без нахилу),
+  // тому калібруємо нейтраль і віднімаємо офсет.
+  if(IS_IPAD){
+    if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
+      iPadNeutralX+=x;
+      iPadNeutralSamples++;
+      x=0;
+    }else{
+      const offset=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
+      x-=offset;
+      if(Math.abs(x)<0.03) x=0;
+    }
+  }
+
+  return {x,y};
 }
 
 function showMotionHint(msg){
@@ -847,6 +874,11 @@ window.addEventListener("pointerdown",async ()=>{
 });
 
 renderMotionEnableButton();
+
+window.addEventListener("orientationchange",()=>{
+  iPadNeutralX=0;
+  iPadNeutralSamples=0;
+});
 
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
