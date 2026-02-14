@@ -598,8 +598,9 @@ let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
 let iPadNeutralX=0;
+let iPadNeutralY=0;
 let iPadNeutralSamples=0;
-const IPAD_NEUTRAL_SAMPLE_COUNT=28;
+const IPAD_NEUTRAL_SAMPLE_COUNT=32;
 
 function getScreenAngle(){
   if(window.screen && window.screen.orientation && typeof window.screen.orientation.angle==="number"){
@@ -629,25 +630,31 @@ function mapGravityFromMotion(g){
     sy=-gy;
   }
 
-  // На iOS і Android знаки осей відрізняються.
-  // На iPad інверсія X зазвичай така ж як на Android, тому віддзеркалюємо X.
-  const xSign=(IS_IOS && !IS_IPAD)?1:-1;
-  const ySign=IS_IOS?-1:1;
+  // На iPad поведінка осей відрізняється від iPhone/Android:
+  // у portrait часто є дрейф по X, а у landscape може інвертуватись Y.
+  const isLandscape=angle===90 || angle===270;
+  const xSign=IS_IPAD?1:(IS_IOS?1:-1);
+  const ySign=IS_IPAD?(isLandscape?1:-1):(IS_IOS?-1:1);
 
   let x=(sx*xSign)/10;
-  const y=(sy*ySign)/10;
+  let y=(sy*ySign)/10;
 
-  // На iPad часто є сталий зсув по X (тягне вліво/вправо без нахилу),
-  // тому калібруємо нейтраль і віднімаємо офсет.
+  // На iPad калібруємо нейтраль по X/Y і прибираємо сталий офсет,
+  // щоб серця не тягнуло постійно вліво або догори.
   if(IS_IPAD){
     if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
       iPadNeutralX+=x;
+      iPadNeutralY+=y;
       iPadNeutralSamples++;
       x=0;
+      y=0;
     }else{
-      const offset=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
-      x-=offset;
-      if(Math.abs(x)<0.03) x=0;
+      const offsetX=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
+      const offsetY=iPadNeutralY/IPAD_NEUTRAL_SAMPLE_COUNT;
+      x-=offsetX;
+      y-=offsetY;
+      if(Math.abs(x)<0.035) x=0;
+      if(Math.abs(y)<0.035) y=0;
     }
   }
 
@@ -877,6 +884,7 @@ renderMotionEnableButton();
 
 window.addEventListener("orientationchange",()=>{
   iPadNeutralX=0;
+  iPadNeutralY=0;
   iPadNeutralSamples=0;
 });
 
