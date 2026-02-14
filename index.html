@@ -129,9 +129,9 @@ const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 const TEXT_FORCE_SNAP_MS=1400;
 
-const NORMAL_HEART_RADIUS=5.4;
+const NORMAL_HEART_RADIUS=4.9;
 const TEXT_MODE_TRIGGER=760;
-const MAX_HEARTS=1600;
+const MAX_HEARTS=2200;
 const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
 
@@ -281,7 +281,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.30;
+    h.targetDrawScale=0.36;
     h.textLocked=false;
   }
 }
