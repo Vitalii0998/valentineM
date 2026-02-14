@@ -277,7 +277,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.24;
+    h.targetDrawScale=0.30;
     h.textLocked=false;
   }
 }
@@ -478,13 +478,13 @@ function generateTextPoints(){
   const mCount=Math.round(total*0.24);
   const wordCount=total-vCount-mCount;
 
-  targets.push(...assignFromPool(vPoints,vCount,3.1,0.19));
-  targets.push(...assignFromPool(mPoints,mCount,3.1,0.19));
+  targets.push(...assignFromPool(vPoints,vCount,3.1,0.205));
+  targets.push(...assignFromPool(mPoints,mCount,3.1,0.205));
 
   const wordTopCount=Math.round(wordCount*0.70);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.11));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.10));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.125));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.115));
 
   shuffle(targets);
 }
