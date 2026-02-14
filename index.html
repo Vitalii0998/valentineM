@@ -135,9 +135,9 @@ const SHAKE_THRESHOLD=IS_IOS?9.5:12;
 
 const REFERENCE_AREA=390*844;
 const viewportArea=Math.max(1,w*h);
-const areaScale=Math.min(1.85,Math.max(1,Math.sqrt(viewportArea/REFERENCE_AREA)));
+const areaScale=Math.min(2.35,Math.max(1,Math.sqrt(viewportArea/REFERENCE_AREA)));
 
-const NORMAL_HEART_RADIUS=4.9*areaScale;
+const NORMAL_HEART_RADIUS=5.6*areaScale;
 const TEXT_MODE_TRIGGER=900;
 const MAX_HEARTS=2200;
 const SHAKE_SPAWN_BURST=20;
@@ -649,14 +649,14 @@ function mapGravityFromIpadOrientation(){
     sy=-db;
   }
 
-  let x=sx/28;
-  let y=0.82 + sy/90;
+  let x=sx/26;
+  let y=0.56 + sy/82;
 
   if(Math.abs(x)<0.01) x=0;
-  if(Math.abs(y-0.82)<0.015) y=0.82;
+  if(Math.abs(y-0.56)<0.01) y=0.56;
 
   x=Math.max(-0.95,Math.min(0.95,x));
-  y=Math.max(0.18,Math.min(1,y));
+  y=Math.max(0.08,Math.min(1,y));
   return {x,y};
 }
 
@@ -886,7 +886,7 @@ function motion(e){
   }
 
   if(IS_IPAD){
-    if(iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<220){
+    if(iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<650){
       const mapped=mapGravityFromIpadOrientation();
       if(mapped){
         engine.gravity.x=mapped.x;
@@ -896,7 +896,7 @@ function motion(e){
     }
     // fallback для iPad: без сенсора/до калібрування просто рівно вниз
     engine.gravity.x=0;
-    engine.gravity.y=0.82;
+    engine.gravity.y=0.56;
     return;
   }
 
