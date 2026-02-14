@@ -570,20 +570,31 @@ function bindMotionListener(){
 
 async function ensureMotionPermission(){
   if(window.__motionBound) return true;
-  if(motionPermissionState==="denied") return false;
 
+  // На iOS 16/17 інколи треба підтвердити як motion, так і orientation.
+  // Запитуємо обидва в межах user gesture.
+  const requests=[];
   const DME=window.DeviceMotionEvent;
   if(typeof DME!=="undefined" && typeof DME.requestPermission==="function"){
+    requests.push(DME.requestPermission());
+  }
+  const DOE=window.DeviceOrientationEvent;
+  if(typeof DOE!=="undefined" && typeof DOE.requestPermission==="function"){
+    requests.push(DOE.requestPermission());
+  }
+
+  if(requests.length){
     try{
-      const state=await DME.requestPermission();
-      motionPermissionState=state;
-      if(state!=="granted"){
-        showMotionHint("Щоб працював shake на iPhone/iPad, дозволь Motion & Orientation Access у Safari.");
+      const states=await Promise.allSettled(requests);
+      const denied=states.some(r=>r.status!=="fulfilled" || r.value!=="granted");
+      motionPermissionState=denied?"denied":"granted";
+      if(denied){
+        showMotionHint("Натисни Allow у запиті Safari. Якщо вікно не з’являється — перезавантаж сторінку і тапни ще раз у Safari.");
         return false;
       }
     }catch(_err){
       motionPermissionState="denied";
-      showMotionHint("Safari заблокував доступ до сенсорів. Увімкни Motion & Orientation Access.");
+      showMotionHint("Safari заблокував сенсори. Перевідкрий сторінку у Safari і дозволь доступ у системному діалозі.");
       return false;
     }
   }
@@ -720,7 +731,9 @@ function motion(e){
 }
 
 window.addEventListener("pointerdown",async ()=>{
-  await ensureMotionPermission();
+  const motionReady=await ensureMotionPermission();
+
+  if(!motionReady && !textMode && resetMode==="idle") return;
 
   if(resetMode==="gather"){
     triggerExplosion();
