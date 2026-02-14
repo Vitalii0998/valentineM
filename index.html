@@ -562,7 +562,16 @@ function updateTextMode(){
     const h=hearts[i];
     const t=targets[i];
     if(!t) continue;
-    if(h.textLocked) continue;
+
+    if(h.textLocked){
+      // На мобільних інколи є мікродрейф навіть після settle,
+      // тому жорстко піннимо вже зафіксовані частинки в target.
+      Body.setPosition(h.body,{x:t.x,y:t.y});
+      Body.setVelocity(h.body,{x:0,y:0});
+      Body.setAngularVelocity(h.body,0);
+      h.targetDrawScale=t.drawScale ?? 0.18;
+      continue;
+    }
 
     const drawScale=t.drawScale ?? 0.18;
     const gain=drawScale<0.1 ? 0.18 : 0.13;
@@ -590,7 +599,7 @@ function updateTextMode(){
 Events.on(engine,"beforeUpdate",updateTextMode);
 
 function motion(e){
-  if(textMode) return;
+  if(textMode || resetMode!=="idle") return;
 
   // NORMAL MODE
   const now=Date.now();
