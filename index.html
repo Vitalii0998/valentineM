@@ -281,7 +281,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.5;
+    h.targetDrawScale=0.9;
     h.textLocked=false;
   }
 }
@@ -478,8 +478,8 @@ function generateTextPoints(){
 
   // Трохи більше сердечок у V/M, але більшість лишається на words
   const total=hearts.length;
-  const vCount=Math.round(total*0.16);
-  const mCount=Math.round(total*0.24);
+  const vCount=Math.round(total*0.13);
+  const mCount=Math.round(total*0.30);
   const wordCount=total-vCount-mCount;
 
   targets.push(...assignFromPool(vPoints,vCount,3.1,0.24));
@@ -683,5 +683,3 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
-
-
