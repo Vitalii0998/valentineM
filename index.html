@@ -1,10 +1,9 @@
 <!doctype html>
 <html lang="uk">
 <head>
-<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>💗</title>
+<title>Heart Physics</title>
 
 <style>
 html,body{
@@ -140,8 +139,8 @@ const areaScale=Math.min(2.35,Math.max(1,Math.sqrt(viewportArea/REFERENCE_AREA))
 
 const NORMAL_HEART_RADIUS=5.6*areaScale;
 const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=3200;
-const SHAKE_SPAWN_BURST=25;
+const MAX_HEARTS=2200;
+const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
 
 const heartSpriteCache=new Map();
@@ -304,26 +303,35 @@ function triggerExplosion(){
 
   for(const h of hearts){
     const p=h.body.position;
-    const dx=p.x-centerX;
-    const dy=p.y-centerY;
-    const len=Math.hypot(dx,dy);
-    let ux,uy;
-    if(len<1.2){
-      const a=Math.random()*Math.PI*2;
-      ux=Math.cos(a);
-      uy=Math.sin(a);
-    }else{
-      ux=dx/len;
-      uy=dy/len;
-    }
-    const speed=4.6+Math.random()*2.2;
+
+    // Розкидаємо не лише радіально від центру, а по всій площі серця:
+    // беремо випадкову точку всередині контуру і штовхаємо частинку в її бік.
+    const target=randomInside();
+    const tdx=target.x-p.x;
+    const tdy=target.y-p.y;
+    const tlen=Math.hypot(tdx,tdy)||1;
+
+    const cdx=p.x-centerX;
+    const cdy=p.y-centerY;
+    const clen=Math.hypot(cdx,cdy)||1;
+
+    // Міксуємо напрямок до випадкової точки + трохи радіального розльоту,
+    // щоб заповнювався весь контур серця, а не кілька вузьких променів.
+    let ux=(tdx/tlen)*0.72 + (cdx/clen)*0.28;
+    let uy=(tdy/tlen)*0.72 + (cdy/clen)*0.28;
+    const ulen=Math.hypot(ux,uy)||1;
+    ux/=ulen;
+    uy/=ulen;
+
+    const speed=4.4+Math.random()*2.4;
+    const jitter=(Math.random()-0.5)*0.8;
 
     Body.setStatic(h.body,false);
     // Під час вибуху вимикаємо колізії серце-серце (менше лагів на мобільних),
     // але лишаємо взаємодію зі стінками контуру через mask/category.
     h.body.collisionFilter.group=-2;
     h.body.collisionFilter.mask=0x0001;
-    Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
+    Body.setVelocity(h.body,{x:ux*speed + jitter,y:uy*speed*0.95 - 0.35});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
     h.targetDrawScale=0.36;
     h.textLocked=false;
@@ -943,4 +951,3 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
-
