@@ -176,7 +176,7 @@ function shuffle(arr){
   return arr;
 }
 
-function moveBodyToward(body,tx,ty,gain,maxStep){
+function moveBodyToward(body,tx,ty,gain,maxStep,snapDist=0.9){
   const px=body.position.x;
   const py=body.position.y;
   const dx=tx-px;
@@ -184,7 +184,12 @@ function moveBodyToward(body,tx,ty,gain,maxStep){
   const dist=Math.hypot(dx,dy);
   if(dist<0.0001) return {x:px,y:py,dist:0};
 
-  const step=Math.min(maxStep,Math.max(0.18,dist*gain));
+  if(dist<=snapDist){
+    Body.setPosition(body,{x:tx,y:ty});
+    return {x:tx,y:ty,dist:0};
+  }
+
+  const step=Math.min(maxStep,dist*gain);
   const nx=px+(dx/dist)*step;
   const ny=py+(dy/dist)*step;
   Body.setPosition(body,{x:nx,y:ny});
@@ -516,14 +521,14 @@ function updateTextMode(){
   if(resetMode==="gather"){
     let settled=0;
     for(const h of hearts){
-      const moved=moveBodyToward(h.body,centerX,centerY,0.16,9.5);
+      const moved=moveBodyToward(h.body,centerX,centerY,0.11,6.4,1.1);
       Body.setVelocity(h.body,{x:0,y:0});
       Body.setAngularVelocity(h.body,0);
       h.targetDrawScale=0.22;
 
       const dx=centerX-moved.x;
       const dy=centerY-moved.y;
-      if(dx*dx+dy*dy<18*18) settled++;
+      if(dx*dx+dy*dy<20*20) settled++;
     }
 
     if(settled>=Math.max(1,Math.floor(hearts.length*0.88)) || performance.now()-resetGatherStartedAt>700){
@@ -544,29 +549,27 @@ function updateTextMode(){
     const h=hearts[i];
     const t=targets[i];
     if(!t) continue;
+    if(h.textLocked) continue;
 
     const drawScale=t.drawScale ?? 0.18;
-    const gain=drawScale<0.1 ? 0.22 : 0.16;
-    const maxStep=drawScale<0.1 ? 8.6 : 7.2;
+    const gain=drawScale<0.1 ? 0.18 : 0.13;
+    const maxStep=drawScale<0.1 ? 7.0 : 5.8;
+    const snapDist=drawScale<0.1 ? 0.85 : 0.95;
 
-    const moved=moveBodyToward(h.body,t.x,t.y,gain,maxStep);
-    if(!h.textLocked || moved.dist>3.2){
-      Body.setVelocity(h.body,{x:0,y:0});
-      Body.setAngularVelocity(h.body,0);
-    }
+    const moved=moveBodyToward(h.body,t.x,t.y,gain,maxStep,snapDist);
+    Body.setVelocity(h.body,{x:0,y:0});
+    Body.setAngularVelocity(h.body,0);
 
     h.targetDrawScale=drawScale;
 
     const dx=t.x-moved.x;
     const dy=t.y-moved.y;
-    const settleDist=drawScale < 0.1 ? 2.2 : 1.9;
+    const settleDist=drawScale < 0.1 ? 1.7 : 1.5;
     if(dx*dx+dy*dy < settleDist*settleDist){
       Body.setPosition(h.body,{x:t.x,y:t.y});
       Body.setVelocity(h.body,{x:0,y:0});
       Body.setAngularVelocity(h.body,0);
       h.textLocked=true;
-    }else if(h.textLocked && dx*dx+dy*dy>5*5){
-      h.textLocked=false;
     }
   }
 }
