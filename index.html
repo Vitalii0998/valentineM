@@ -138,10 +138,10 @@ const REFERENCE_AREA=390*844;
 const viewportArea=Math.max(1,w*h);
 const areaScale=Math.min(2.35,Math.max(1,Math.sqrt(viewportArea/REFERENCE_AREA)));
 
-const NORMAL_HEART_RADIUS=5.6*areaScale;
+const NORMAL_HEART_RADIUS=4.8*areaScale;
 const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=3200;
-const SHAKE_SPAWN_BURST=25;
+const MAX_HEARTS=4200;
+const SHAKE_SPAWN_BURST=30;
 const KEYBOARD_SPAWN_BURST=18;
 
 const heartSpriteCache=new Map();
@@ -952,6 +952,7 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
 
 
 
