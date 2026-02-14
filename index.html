@@ -367,12 +367,12 @@ function generateTextPoints(){
     for(let py=0;py<h;py+=step){
       for(let px=0;px<w;px+=step){
         const i=(py*w+px)*4;
-        if(data[i+3]>40 && pointInsideHeart(px,py)){
+        if(data[i+3]>150 && pointInsideHeart(px,py)){
           points.push({x:px,y:py});
         }
       }
     }
-    return points;
+    return shuffle(points);
   }
 
   function sampleLine(x1,y1,x2,y2,n){
@@ -416,26 +416,25 @@ function generateTextPoints(){
     return fallbackFactory();
   }
 
-  function assignFromPool(pool,count,jitterMax=1.1,drawScale=0.18){
-+    // Рівномірно проходимо увесь пул, щоб не було "дір" у гліфах.
-+    const uniqueCount=Math.min(count,pool.length);
-+    const stride=pool.length/uniqueCount;
-+    for(let i=0;i<uniqueCount;i++){
-+      const base=pool[Math.floor(i*stride)];
-+      out.push({x:base.x,y:base.y,drawScale});
-+    }
-+
-+    // Якщо сердечок більше, ніж унікальних точок, додаємо мінімальний джитер.
-+    const GOLDEN_ANGLE=2.399963229728653;
-+    for(let i=uniqueCount;i<count;i++){
-+      const base=pool[(i-uniqueCount)%pool.length];
-+      const rep=((i-uniqueCount)/pool.length|0)+1;
-+      const angle=i*GOLDEN_ANGLE;
-+      const radius=Math.min(jitterMax,0.16+rep*0.15);
-+      const x=base.x+Math.cos(angle)*radius;
-+      const y=base.y+Math.sin(angle)*radius;
-+      out.push(pointInsideHeart(x,y)?{x,y,drawScale}:{x:base.x,y:base.y,drawScale});
-+    }
+  function assignFromPool(pool,count,jitterMax=4,drawScale=0.18){
+    const out=[];
+    if(pool.length===0){
+      for(let i=0;i<count;i++) out.push({...randomInside(),drawScale});
+      return out;
+    }
+    for(let i=0;i<count;i++){
+      const base=pool[i%pool.length];
+      const rep=(i/pool.length)|0;
+      if(rep===0){
+        out.push({x:base.x,y:base.y,drawScale});
+        continue;
+      }
+      const angle=i*0.63+rep*1.17;
+      const radius=Math.min(jitterMax,rep*0.45);
+      const x=base.x+Math.cos(angle)*radius;
+      const y=base.y+Math.sin(angle)*radius;
+      out.push(pointInsideHeart(x,y)?{x,y,drawScale}:{x:base.x,y:base.y,drawScale});
+    }
     return out;
   }
 
@@ -487,6 +486,7 @@ function generateTextPoints(){
   targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.125));
   targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.115));
 
+  shuffle(targets);
 }
 
 
@@ -660,4 +660,3 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
-
