@@ -490,7 +490,7 @@ function generateTextPoints(){
     return;
   }
 
-  // Трохи більше сердечок у V/M, але більшість лишається на words
+  // Трхи більше сердечок у V/M, але більшість лишається на words
   const total=hearts.length;
   const vCount=Math.round(total*0.13);
   const mCount=Math.round(total*0.30);
@@ -551,9 +551,6 @@ Events.on(render,"afterRender",()=>{
 let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
-let orientationSample={beta:0,gamma:0,ts:0};
-let orientationNeutral=null;
-let orientationNeutralTimer=0;
 
 function getScreenAngle(){
   if(window.screen && window.screen.orientation && typeof window.screen.orientation.angle==="number"){
@@ -568,83 +565,24 @@ function mapGravityFromMotion(g){
   const gy=g.y||0;
   const angle=getScreenAngle();
 
-  // Переводимо device-axes у screen-axes окремо для iOS / Android,
-  // щоб "низ екрана" завжди давав +Y для фізики незалежно від орієнтації.
-  let sx=0;
-  let sy=0;
-
-  if(IS_IOS){
-    if(angle===90){
-      sx=-gy;
-      sy=-gx;
-    }else if(angle===270){
-      sx=gy;
-      sy=gx;
-    }else if(angle===180){
-      sx=gx;
-      sy=gy;
-    }else{
-      sx=-gx;
-      sy=-gy;
-    }
-  }else{
-    if(angle===90){
-      sx=gy;
-      sy=gx;
-    }else if(angle===270){
-      sx=-gy;
-      sy=-gx;
-    }else if(angle===180){
-      sx=-gx;
-      sy=-gy;
-    }else{
-      sx=gx;
-      sy=gy;
-    }
-  }
-
-  // Прибираємо дрібний сенсорний дрейф, який на планшетах дає постійний "знос" вбік.
-  if(Math.abs(sx)<0.28) sx=0;
-  if(Math.abs(sy)<0.28) sy=0;
-
-  return {x:sx/10,y:sy/10};
-}
-
-function mapGravityFromOrientation(beta,gamma){
-  const neutralBeta=orientationNeutral?orientationNeutral.beta:0;
-  const neutralGamma=orientationNeutral?orientationNeutral.gamma:0;
-  let b=beta-neutralBeta;
-  let g=gamma-neutralGamma;
-
-  // clamp spikes
-  b=Math.max(-75,Math.min(75,b));
-  g=Math.max(-75,Math.min(75,g));
-
-  const angle=getScreenAngle();
-  let sx=0;
-  let sy=0;
-
+  // Повертаємо осі сенсора у координати екрана, щоб при ротації
+  // сердечка все одно падали "вниз" відносно поточної орієнтації.
+  let sx=gx;
+  let sy=gy;
   if(angle===90){
-    sx=b;
-    sy=-g;
+    sx=gy;
+    sy=-gx;
   }else if(angle===270){
-    sx=-b;
-    sy=g;
+    sx=-gy;
+    sy=gx;
   }else if(angle===180){
-    sx=-g;
-    sy=-b;
-  }else{
-    sx=g;
-    sy=b;
+    sx=-gx;
+    sy=-gy;
   }
 
-  if(Math.abs(sx)<1.2) sx=0;
-  if(Math.abs(sy)<1.2) sy=0;
-
-  return {
-    x:Math.max(-1,Math.min(1,sx/38)),
-    y:Math.max(-1,Math.min(1,sy/38))
-  };
+  // На iOS (Safari) вертикальна вісь здебільшого інвертована відносно Android.
+  const ySign=IS_IOS?-1:1;
+  return {x:sx/10,y:(sy*ySign)/10};
 }
 
 function showMotionHint(msg){
@@ -677,26 +615,9 @@ function renderMotionEnableButton(){
   document.body.appendChild(btn);
 }
 
-function onOrientation(e){
-  if(e.beta==null || e.gamma==null) return;
-  orientationSample={beta:e.beta,gamma:e.gamma,ts:performance.now()};
-}
-
-function scheduleOrientationNeutral(){
-  clearTimeout(orientationNeutralTimer);
-  orientationNeutralTimer=setTimeout(()=>{
-    if(orientationSample.ts>0){
-      orientationNeutral={beta:orientationSample.beta,gamma:orientationSample.gamma};
-    }
-  },220);
-}
-
 function bindMotionListener(){
   if(window.__motionBound) return;
   window.addEventListener("devicemotion",motion,{passive:true});
-  window.addEventListener("deviceorientation",onOrientation,{passive:true});
-  window.addEventListener("orientationchange",scheduleOrientationNeutral,{passive:true});
-  scheduleOrientationNeutral();
   window.__motionBound=true;
 }
 
@@ -724,7 +645,6 @@ async function ensureMotionPermission(){
     }
 
     bindMotionListener();
-    scheduleOrientationNeutral();
     motionPermissionState="granted";
     const hint=document.getElementById("motionHint");
     if(hint) hint.remove();
@@ -856,14 +776,6 @@ function motion(e){
       lastShake=now;
       for(let i=0;i<SHAKE_SPAWN_BURST;i++) spawn();
     }
-  }
-
-  const orientationFresh=orientationSample.ts>0 && (performance.now()-orientationSample.ts)<520;
-  if(orientationFresh){
-    const mapped=mapGravityFromOrientation(orientationSample.beta,orientationSample.gamma);
-    engine.gravity.x=mapped.x;
-    engine.gravity.y=mapped.y;
-    return;
   }
 
   const g=e.accelerationIncludingGravity;
