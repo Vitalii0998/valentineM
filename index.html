@@ -119,16 +119,19 @@ let textPoints=[];
 let targets=[];
 let resetMode="idle"; // idle | gather | explode
 let resetGatherStartedAt=0;
+let resetGatherSettledAt=0;
 let resetExplodeStartedAt=0;
+let textModeStartedAt=0;
 
 const EXPLODE_MAX_LIFETIME_MS=1400;
 const EXPLODE_FAST_CLEANUP_Y=h*0.78;
+const TEXT_MODE_MIN_HOLD_MS=2200;
 
-const NORMAL_HEART_RADIUS=5.6;
-const TEXT_MODE_TRIGGER=1200;
-const MAX_HEARTS=3200;
-const SHAKE_SPAWN_BURST=34;
-const KEYBOARD_SPAWN_BURST=28;
+const NORMAL_HEART_RADIUS=6.4;
+const TEXT_MODE_TRIGGER=900;
+const MAX_HEARTS=2200;
+const SHAKE_SPAWN_BURST=26;
+const KEYBOARD_SPAWN_BURST=22;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -199,6 +202,7 @@ function moveBodyToward(body,tx,ty,gain,maxStep,snapDist=0.9){
 function enterTextMode(){
   if(resetMode!=="idle") return;
   textMode=true;
+  textModeStartedAt=performance.now();
   generateTextPoints();
 
   // вимикаємо колізії і гравітацію для стабільного формування тексту
@@ -225,6 +229,7 @@ function startResetSequence(){
 
   resetMode="gather";
   resetGatherStartedAt=performance.now();
+  resetGatherSettledAt=0;
   textMode=false;
   targets.length=0;
 
@@ -521,17 +526,25 @@ function updateTextMode(){
   if(resetMode==="gather"){
     let settled=0;
     for(const h of hearts){
-      const moved=moveBodyToward(h.body,centerX,centerY,0.11,6.4,1.1);
+      const moved=moveBodyToward(h.body,centerX,centerY,0.09,4.8,1.4);
       Body.setVelocity(h.body,{x:0,y:0});
       Body.setAngularVelocity(h.body,0);
       h.targetDrawScale=0.22;
 
       const dx=centerX-moved.x;
       const dy=centerY-moved.y;
-      if(dx*dx+dy*dy<20*20) settled++;
+      if(dx*dx+dy*dy<24*24) settled++;
     }
 
-    if(settled>=Math.max(1,Math.floor(hearts.length*0.88)) || performance.now()-resetGatherStartedAt>700){
+    const now=performance.now();
+    if(settled>=Math.max(1,Math.floor(hearts.length*0.95))){
+      if(resetGatherSettledAt===0) resetGatherSettledAt=now;
+    }else{
+      resetGatherSettledAt=0;
+    }
+
+    const settledLongEnough=resetGatherSettledAt>0 && (now-resetGatherSettledAt)>420;
+    if(settledLongEnough || now-resetGatherStartedAt>1300){
       triggerExplosion();
     }
     return;
@@ -603,7 +616,9 @@ window.addEventListener("pointerdown",()=>{
     window.addEventListener("devicemotion",motion,{passive:true});
     window.__motionBound=true;
   }
-  startResetSequence();
+  if(textMode && performance.now()-textModeStartedAt>TEXT_MODE_MIN_HOLD_MS){
+    startResetSequence();
+  }
 });
 
 window.addEventListener("keydown",e=>{
