@@ -129,7 +129,7 @@ const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 const TEXT_FORCE_SNAP_MS=1400;
 
-const NORMAL_HEART_RADIUS=6.4;
+const NORMAL_HEART_RADIUS=5.4;
 const TEXT_MODE_TRIGGER=760;
 const MAX_HEARTS=1600;
 const SHAKE_SPAWN_BURST=20;
@@ -222,7 +222,7 @@ function enterTextMode(){
     Body.setVelocity(h.body,{x:0,y:0});
     Body.setAngularVelocity(h.body,0);
 
-    h.targetDrawScale=0.18;
+    h.targetDrawScale=0.22;
     h.textLocked=false;
   }
 }
@@ -482,13 +482,13 @@ function generateTextPoints(){
   const mCount=Math.round(total*0.24);
   const wordCount=total-vCount-mCount;
 
-  targets.push(...assignFromPool(vPoints,vCount,3.1,0.205));
-  targets.push(...assignFromPool(mPoints,mCount,3.1,0.205));
+  targets.push(...assignFromPool(vPoints,vCount,3.1,0.24));
+  targets.push(...assignFromPool(mPoints,mCount,3.1,0.24));
 
   const wordTopCount=Math.round(wordCount*0.70);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.125));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.115));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.16));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.15));
 
   shuffle(targets);
 }
