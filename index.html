@@ -598,7 +598,6 @@ let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
 let iPadNeutralX=0;
-let iPadNeutralY=0;
 let iPadNeutralSamples=0;
 const IPAD_NEUTRAL_SAMPLE_COUNT=32;
 
@@ -630,34 +629,32 @@ function mapGravityFromMotion(g){
     sy=-gy;
   }
 
-  // На iPad поведінка осей відрізняється від iPhone/Android:
-  // у portrait часто є дрейф по X, а у landscape може інвертуватись Y.
-  const isLandscape=angle===90 || angle===270;
-  const xSign=IS_IPAD?1:(IS_IOS?1:-1);
-  const ySign=IS_IPAD?(isLandscape?1:-1):(IS_IOS?-1:1);
-
-  let x=(sx*xSign)/10;
-  let y=(sy*ySign)/10;
-
-  // На iPad калібруємо нейтраль по X/Y і прибираємо сталий офсет,
-  // щоб серця не тягнуло постійно вліво або догори.
+  // iPad-режим: примусово стабілізуємо падіння вниз і прибираємо X-дрейф,
+  // бо сирі осі акселерометра на Safari часто мають нестабільні знаки.
   if(IS_IPAD){
+    let x=sx/11;
+    let y=Math.abs(sy)/9;
+
     if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
       iPadNeutralX+=x;
-      iPadNeutralY+=y;
       iPadNeutralSamples++;
       x=0;
-      y=0;
     }else{
       const offsetX=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
-      const offsetY=iPadNeutralY/IPAD_NEUTRAL_SAMPLE_COUNT;
       x-=offsetX;
-      y-=offsetY;
-      if(Math.abs(x)<0.035) x=0;
-      if(Math.abs(y)<0.035) y=0;
+      if(Math.abs(x)<0.05) x=0;
     }
+
+    y=Math.max(0.22,Math.min(1,y));
+    x=Math.max(-1,Math.min(1,x));
+    return {x,y};
   }
 
+  // На iPhone/Android лишається стандартний sign-map.
+  const xSign=IS_IOS?1:-1;
+  const ySign=IS_IOS?-1:1;
+  const x=(sx*xSign)/10;
+  const y=(sy*ySign)/10;
   return {x,y};
 }
 
@@ -884,7 +881,6 @@ renderMotionEnableButton();
 
 window.addEventListener("orientationchange",()=>{
   iPadNeutralX=0;
-  iPadNeutralY=0;
   iPadNeutralSamples=0;
 });
 
