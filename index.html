@@ -613,6 +613,16 @@ function onDeviceOrientation(e){
   if(IS_IPAD && !iPadOrientationNeutral.ready){
     iPadOrientationNeutral={beta:e.beta,gamma:e.gamma,ready:true};
   }
+
+  // Для iPad оновлюємо гравітацію одразу на orientation event,
+  // щоб не чекати наступного devicemotion тіку (менша затримка реакції).
+  if(IS_IPAD && !textMode && resetMode==="idle"){
+    const mapped=mapGravityFromIpadOrientation();
+    if(mapped){
+      engine.gravity.x=mapped.x;
+      engine.gravity.y=mapped.y;
+    }
+  }
 }
 
 function mapGravityFromIpadOrientation(){
@@ -639,11 +649,11 @@ function mapGravityFromIpadOrientation(){
     sy=-db;
   }
 
-  let x=sx/34;
-  let y=0.82 + sy/110;
+  let x=sx/28;
+  let y=0.82 + sy/90;
 
-  if(Math.abs(x)<0.015) x=0;
-  if(Math.abs(y-0.82)<0.02) y=0.82;
+  if(Math.abs(x)<0.01) x=0;
+  if(Math.abs(y-0.82)<0.015) y=0.82;
 
   x=Math.max(-0.95,Math.min(0.95,x));
   y=Math.max(0.18,Math.min(1,y));
@@ -876,7 +886,7 @@ function motion(e){
   }
 
   if(IS_IPAD){
-    if(iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<500){
+    if(iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<220){
       const mapped=mapGravityFromIpadOrientation();
       if(mapped){
         engine.gravity.x=mapped.x;
