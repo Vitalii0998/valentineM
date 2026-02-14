@@ -119,6 +119,10 @@ let textPoints=[];
 let targets=[];
 let resetMode="idle"; // idle | gather | explode
 let resetGatherStartedAt=0;
+let resetExplodeStartedAt=0;
+
+const EXPLODE_MAX_LIFETIME_MS=1400;
+const EXPLODE_FAST_CLEANUP_Y=h*0.78;
 
 const NORMAL_HEART_RADIUS=5.6;
 const TEXT_MODE_TRIGGER=1200;
@@ -218,9 +222,10 @@ function startResetSequence(){
 
 function triggerExplosion(){
   resetMode="explode";
+  resetExplodeStartedAt=performance.now();
 
   engine.gravity.x=0;
-  engine.gravity.y=1;
+  engine.gravity.y=1.35;
 
   for(const h of hearts){
     const p=h.body.position;
@@ -229,22 +234,37 @@ function triggerExplosion(){
     const len=Math.hypot(dx,dy)||1;
     const ux=dx/len;
     const uy=dy/len;
-    const speed=8+Math.random()*5;
+    const speed=6.4+Math.random()*3.2;
 
     Body.setStatic(h.body,false);
     h.body.collisionFilter.group=0;
     h.body.collisionFilter.mask=0x0001;
-    Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.85-1.6});
-    Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.55);
-    h.targetDrawScale=0.5;
+    Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.82-1.1});
+    Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
+    h.targetDrawScale=0.2;
   }
 }
 
 function cleanupExplodedHearts(){
+  const elapsed=performance.now()-resetExplodeStartedAt;
+
   for(let i=hearts.length-1;i>=0;i--){
-    const hb=hearts[i].body;
+    const item=hearts[i];
+    const hb=item.body;
     const p=hb.position;
-    if((p.y>h+80 && hb.velocity.y>0.1) || p.x<-80 || p.x>w+80){
+
+    if(elapsed>450){
+      item.targetDrawScale=0.08;
+    }
+
+    const shouldRemove =
+      elapsed>EXPLODE_MAX_LIFETIME_MS ||
+      (p.y>EXPLODE_FAST_CLEANUP_Y && hb.velocity.y>0.4) ||
+      p.y>h+40 ||
+      p.x<-50 ||
+      p.x>w+50;
+
+    if(shouldRemove){
       Composite.remove(engine.world,hb);
       hearts.splice(i,1);
     }
