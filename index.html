@@ -600,6 +600,8 @@ let motionPromptInFlight=false;
 let iPadNeutralX=0;
 let iPadNeutralSamples=0;
 const IPAD_NEUTRAL_SAMPLE_COUNT=32;
+let iPadOrientation={beta:0,gamma:0,ts:0};
+let iPadOrientationNeutral={beta:0,gamma:0,ready:false};
 
 function getScreenAngle(){
   if(window.screen && window.screen.orientation && typeof window.screen.orientation.angle==="number"){
@@ -607,6 +609,50 @@ function getScreenAngle(){
   }
   if(typeof window.orientation==="number") return (window.orientation%360+360)%360;
   return 0;
+}
+function onDeviceOrientation(e){
+  if(e.beta==null || e.gamma==null) return;
+  iPadOrientation={beta:e.beta,gamma:e.gamma,ts:performance.now()};
+  if(IS_IPAD && !iPadOrientationNeutral.ready){
+    iPadOrientationNeutral={beta:e.beta,gamma:e.gamma,ready:true};
+  }
+}
+
+function mapGravityFromIpadOrientation(){
+  if(!iPadOrientationNeutral.ready) return null;
+  const angle=getScreenAngle();
+  const db=iPadOrientation.beta-iPadOrientationNeutral.beta;
+  const dg=iPadOrientation.gamma-iPadOrientationNeutral.gamma;
+
+  let sx=dg;
+  let sy=db;
+  if(angle===90){
+    sx=db;
+    sy=-dg;
+  }else if(angle===270){
+    sx=-db;
+    sy=dg;
+  }else if(angle===180){
+    sx=-dg;
+    sy=-db;
+  }
+
+  let x=sx/58;
+  let y=0.3 + sy/62;
+
+  if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
+    iPadNeutralX+=x;
+    iPadNeutralSamples++;
+    x=0;
+  }else{
+    const offsetX=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
+    x-=offsetX;
+    if(Math.abs(x)<0.04) x=0;
+  }
+
+  x=Math.max(-1,Math.min(1,x));
+  y=Math.max(0.12,Math.min(1,y));
+  return {x,y};
 }
 
 function mapGravityFromMotion(g){
@@ -629,26 +675,8 @@ function mapGravityFromMotion(g){
     sy=-gy;
   }
 
-  // iPad-режим: примусово стабілізуємо падіння вниз і прибираємо X-дрейф,
-  // бо сирі осі акселерометра на Safari часто мають нестабільні знаки.
-  if(IS_IPAD){
-    let x=sx/11;
-    let y=Math.abs(sy)/9;
-
-    if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
-      iPadNeutralX+=x;
-      iPadNeutralSamples++;
-      x=0;
-    }else{
-      const offsetX=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
-      x-=offsetX;
-      if(Math.abs(x)<0.05) x=0;
-    }
-
-    y=Math.max(0.22,Math.min(1,y));
-    x=Math.max(-1,Math.min(1,x));
-    return {x,y};
-  }
+  // Для iPad використовуємо deviceorientation у motion(),
+  // а тут лишається fallback-мапінг.
 
   // На iPhone/Android лишається стандартний sign-map.
   const xSign=IS_IOS?1:-1;
@@ -691,6 +719,7 @@ function renderMotionEnableButton(){
 function bindMotionListener(){
   if(window.__motionBound) return;
   window.addEventListener("devicemotion",motion,{passive:true});
+  window.addEventListener("deviceorientation",onDeviceOrientation,{passive:true});
   window.__motionBound=true;
 }
 
@@ -851,6 +880,15 @@ function motion(e){
     }
   }
 
+  if(IS_IPAD && iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<450){
+    const mapped=mapGravityFromIpadOrientation();
+    if(mapped){
+      engine.gravity.x=mapped.x;
+      engine.gravity.y=mapped.y;
+      return;
+    }
+  }
+
   const g=e.accelerationIncludingGravity;
   if(g){
     const mapped=mapGravityFromMotion(g);
@@ -882,6 +920,8 @@ renderMotionEnableButton();
 window.addEventListener("orientationchange",()=>{
   iPadNeutralX=0;
   iPadNeutralSamples=0;
+  iPadOrientationNeutral.ready=false;
+  iPadOrientation.ts=0;
 });
 
 window.addEventListener("keydown",e=>{
