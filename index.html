@@ -281,7 +281,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.36;
+    h.targetDrawScale=1;
     h.textLocked=false;
   }
 }
@@ -695,3 +695,4 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
+
