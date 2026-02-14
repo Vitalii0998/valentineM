@@ -125,7 +125,7 @@ let textModeStartedAt=0;
 
 const EXPLODE_MAX_LIFETIME_MS=1400;
 const EXPLODE_FAST_CLEANUP_Y=h*0.78;
-const TEXT_MODE_MIN_HOLD_MS=2200;
+const TEXT_MODE_MIN_HOLD_MS=900;
 
 const NORMAL_HEART_RADIUS=6.4;
 const TEXT_MODE_TRIGGER=900;
@@ -639,6 +639,10 @@ window.addEventListener("pointerdown",()=>{
   if(!window.__motionBound){
     window.addEventListener("devicemotion",motion,{passive:true});
     window.__motionBound=true;
+  }
+  if(resetMode==="gather"){
+    triggerExplosion();
+    return;
   }
   if(textMode && performance.now()-textModeStartedAt>TEXT_MODE_MIN_HOLD_MS){
     startResetSequence();
