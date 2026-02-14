@@ -134,6 +134,8 @@ const TEXT_MODE_TRIGGER=900;
 const MAX_HEARTS=2200;
 const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const SHAKE_THRESHOLD=IS_IOS?9.5:12;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -549,6 +551,17 @@ Events.on(render,"afterRender",()=>{
 let lastShake=0;
 let motionPermissionState="unknown";
 
+function showMotionHint(msg){
+  let hint=document.getElementById("motionHint");
+  if(!hint){
+    hint=document.createElement("div");
+    hint.id="motionHint";
+    hint.style.cssText="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;padding:10px 14px;border-radius:10px;background:rgba(8,11,28,.82);color:#fff;font:600 13px/1.25 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:min(92vw,460px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3);";
+    document.body.appendChild(hint);
+  }
+  hint.textContent=msg;
+}
+
 function bindMotionListener(){
   if(window.__motionBound) return;
   window.addEventListener("devicemotion",motion,{passive:true});
@@ -564,15 +577,21 @@ async function ensureMotionPermission(){
     try{
       const state=await DME.requestPermission();
       motionPermissionState=state;
-      if(state!=="granted") return false;
+      if(state!=="granted"){
+        showMotionHint("Щоб працював shake на iPhone/iPad, дозволь Motion & Orientation Access у Safari.");
+        return false;
+      }
     }catch(_err){
       motionPermissionState="denied";
+      showMotionHint("Safari заблокував доступ до сенсорів. Увімкни Motion & Orientation Access.");
       return false;
     }
   }
 
   bindMotionListener();
   motionPermissionState="granted";
+  const hint=document.getElementById("motionHint");
+  if(hint) hint.remove();
   return true;
 }
 
@@ -687,7 +706,7 @@ function motion(e){
   const a=e.acceleration||e.accelerationIncludingGravity;
   if(a){
     const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
-    if(mag>12 && now-lastShake>140){
+    if(mag>SHAKE_THRESHOLD && now-lastShake>140){
       lastShake=now;
       for(let i=0;i<SHAKE_SPAWN_BURST;i++) spawn();
     }
