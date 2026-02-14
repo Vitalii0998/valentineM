@@ -598,8 +598,9 @@ let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
 let iPadNeutralX=0;
+let iPadNeutralY=0;
 let iPadNeutralSamples=0;
-const IPAD_NEUTRAL_SAMPLE_COUNT=32;
+const IPAD_NEUTRAL_SAMPLE_COUNT=36;
 let iPadOrientation={beta:0,gamma:0,ts:0};
 let iPadOrientationNeutral={beta:0,gamma:0,ready:false};
 
@@ -621,8 +622,11 @@ function onDeviceOrientation(e){
 function mapGravityFromIpadOrientation(){
   if(!iPadOrientationNeutral.ready) return null;
   const angle=getScreenAngle();
-  const db=iPadOrientation.beta-iPadOrientationNeutral.beta;
-  const dg=iPadOrientation.gamma-iPadOrientationNeutral.gamma;
+
+  let db=iPadOrientation.beta-iPadOrientationNeutral.beta;
+  let dg=iPadOrientation.gamma-iPadOrientationNeutral.gamma;
+  db=Math.max(-65,Math.min(65,db));
+  dg=Math.max(-65,Math.min(65,dg));
 
   let sx=dg;
   let sy=db;
@@ -637,21 +641,27 @@ function mapGravityFromIpadOrientation(){
     sy=-db;
   }
 
-  let x=sx/58;
-  let y=0.3 + sy/62;
+  let x=sx/72;
+  let y=0.82 + sy/140;
 
+  // прибираємо сталий офсет на iPad (дрейф убік/вгору)
   if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
     iPadNeutralX+=x;
+    iPadNeutralY+=y;
     iPadNeutralSamples++;
     x=0;
+    y=0.82;
   }else{
     const offsetX=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
+    const offsetY=iPadNeutralY/IPAD_NEUTRAL_SAMPLE_COUNT;
     x-=offsetX;
-    if(Math.abs(x)<0.04) x=0;
+    y-=offsetY-0.82;
+    if(Math.abs(x)<0.06) x=0;
+    if(Math.abs(y-0.82)<0.04) y=0.82;
   }
 
-  x=Math.max(-1,Math.min(1,x));
-  y=Math.max(0.12,Math.min(1,y));
+  x=Math.max(-0.75,Math.min(0.75,x));
+  y=Math.max(0.2,Math.min(1,y));
   return {x,y};
 }
 
@@ -880,13 +890,19 @@ function motion(e){
     }
   }
 
-  if(IS_IPAD && iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<450){
-    const mapped=mapGravityFromIpadOrientation();
-    if(mapped){
-      engine.gravity.x=mapped.x;
-      engine.gravity.y=mapped.y;
-      return;
+  if(IS_IPAD){
+    if(iPadOrientation.ts>0 && (performance.now()-iPadOrientation.ts)<500){
+      const mapped=mapGravityFromIpadOrientation();
+      if(mapped){
+        engine.gravity.x=mapped.x;
+        engine.gravity.y=mapped.y;
+        return;
+      }
     }
+    // fallback для iPad: без сенсора/до калібрування просто рівно вниз
+    engine.gravity.x=0;
+    engine.gravity.y=0.82;
+    return;
   }
 
   const g=e.accelerationIncludingGravity;
@@ -919,6 +935,7 @@ renderMotionEnableButton();
 
 window.addEventListener("orientationchange",()=>{
   iPadNeutralX=0;
+  iPadNeutralY=0;
   iPadNeutralSamples=0;
   iPadOrientationNeutral.ready=false;
   iPadOrientation.ts=0;
