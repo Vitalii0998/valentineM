@@ -624,25 +624,25 @@ function mapGravityFromIpadOrientation(){
   db=Math.max(-65,Math.min(65,db));
   dg=Math.max(-65,Math.min(65,dg));
 
+  // Явний screen-space мапінг для iPad (окремо по куту),
+  // щоб нахил вправо/вліво був симетричним у portrait/landscape.
   let sx=dg;
   let sy=db;
   if(angle===90){
-    sx=db;
+    sx=-db;
     sy=-dg;
   }else if(angle===270){
-    sx=-db;
+    sx=db;
     sy=dg;
   }else if(angle===180){
     sx=-dg;
     sy=-db;
   }
 
-  let x=sx/42;
+  let x=sx/34;
   let y=0.82 + sy/110;
 
-  // Базова нейтраль вже врахована через db/dg відносно iPadOrientationNeutral,
-  // тому не додаємо окремий накопичуваний X-offset (він давав крен лише вліво).
-  if(Math.abs(x)<0.03) x=0;
+  if(Math.abs(x)<0.015) x=0;
   if(Math.abs(y-0.82)<0.02) y=0.82;
 
   x=Math.max(-0.95,Math.min(0.95,x));
