@@ -123,8 +123,8 @@ let resetGatherSettledAt=0;
 let resetExplodeStartedAt=0;
 let textModeStartedAt=0;
 
-const EXPLODE_MAX_LIFETIME_MS=1400;
-const EXPLODE_FAST_CLEANUP_Y=h*0.78;
+const EXPLODE_MAX_LIFETIME_MS=1850;
+const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 
 const NORMAL_HEART_RADIUS=6.4;
@@ -252,7 +252,7 @@ function triggerExplosion(){
   resetExplodeStartedAt=performance.now();
 
   engine.gravity.x=0;
-  engine.gravity.y=1.35;
+  engine.gravity.y=1.0;
 
   for(const h of hearts){
     const p=h.body.position;
@@ -268,14 +268,14 @@ function triggerExplosion(){
       ux=dx/len;
       uy=dy/len;
     }
-    const speed=6.4+Math.random()*3.2;
+    const speed=4.6+Math.random()*2.2;
 
     Body.setStatic(h.body,false);
     h.body.collisionFilter.group=0;
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.82-1.1});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.2;
+    h.targetDrawScale=0.24;
     h.textLocked=false;
   }
 }
@@ -288,8 +288,8 @@ function cleanupExplodedHearts(){
     const hb=item.body;
     const p=hb.position;
 
-    if(elapsed>450){
-      item.targetDrawScale=0.08;
+    if(elapsed>700){
+      item.targetDrawScale=0.13;
     }
 
     const shouldRemove =
@@ -479,10 +479,10 @@ function generateTextPoints(){
   targets.push(...assignFromPool(vPoints,vCount,3.1,0.19));
   targets.push(...assignFromPool(mPoints,mCount,3.1,0.19));
 
-  const wordTopCount=Math.round(wordCount*0.58);
+  const wordTopCount=Math.round(wordCount*0.70);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.10,0.085));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.08,0.075));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.11));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.10));
 
   shuffle(targets);
 }
