@@ -123,15 +123,15 @@ let resetGatherSettledAt=0;
 let resetExplodeStartedAt=0;
 let textModeStartedAt=0;
 
-const EXPLODE_MAX_LIFETIME_MS=1850;
+const EXPLODE_MAX_LIFETIME_MS=2600;
 const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 
 const NORMAL_HEART_RADIUS=6.4;
-const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=2200;
-const SHAKE_SPAWN_BURST=26;
-const KEYBOARD_SPAWN_BURST=22;
+const TEXT_MODE_TRIGGER=760;
+const MAX_HEARTS=1600;
+const SHAKE_SPAWN_BURST=20;
+const KEYBOARD_SPAWN_BURST=18;
 
 const heartSpriteCache=new Map();
 function getHeartSprite(size){
@@ -271,9 +271,11 @@ function triggerExplosion(){
     const speed=4.6+Math.random()*2.2;
 
     Body.setStatic(h.body,false);
-    h.body.collisionFilter.group=0;
+    // Під час вибуху вимикаємо колізії серце-серце (менше лагів на мобільних),
+    // але лишаємо взаємодію зі стінками контуру через mask/category.
+    h.body.collisionFilter.group=-2;
     h.body.collisionFilter.mask=0x0001;
-    Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.82-1.1});
+    Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
     h.targetDrawScale=0.24;
     h.textLocked=false;
@@ -288,13 +290,13 @@ function cleanupExplodedHearts(){
     const hb=item.body;
     const p=hb.position;
 
-    if(elapsed>700){
+    if(elapsed>1100){
       item.targetDrawScale=0.13;
     }
 
     const shouldRemove =
-      elapsed>EXPLODE_MAX_LIFETIME_MS ||
-      (p.y>EXPLODE_FAST_CLEANUP_Y && hb.velocity.y>0.4) ||
+      (elapsed>EXPLODE_MAX_LIFETIME_MS && p.y>EXPLODE_FAST_CLEANUP_Y) ||
+      (p.y>EXPLODE_FAST_CLEANUP_Y && hb.velocity.y>0.55) ||
       p.y>h+40 ||
       p.x<-50 ||
       p.x>w+50;
