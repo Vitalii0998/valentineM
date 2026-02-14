@@ -597,10 +597,6 @@ Events.on(render,"afterRender",()=>{
 let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
-let iPadNeutralX=0;
-let iPadNeutralY=0;
-let iPadNeutralSamples=0;
-const IPAD_NEUTRAL_SAMPLE_COUNT=12;
 let iPadOrientation={beta:0,gamma:0,ts:0};
 let iPadOrientationNeutral={beta:0,gamma:0,ready:false};
 
@@ -644,21 +640,10 @@ function mapGravityFromIpadOrientation(){
   let x=sx/42;
   let y=0.82 + sy/110;
 
-  // прибираємо сталий офсет на iPad (дрейф убік/вгору)
-  if(iPadNeutralSamples<IPAD_NEUTRAL_SAMPLE_COUNT){
-    iPadNeutralX+=x;
-    iPadNeutralY+=y;
-    iPadNeutralSamples++;
-    x*=0.35;
-    y=0.82 + (y-0.82)*0.35;
-  }else{
-    const offsetX=iPadNeutralX/IPAD_NEUTRAL_SAMPLE_COUNT;
-    const offsetY=iPadNeutralY/IPAD_NEUTRAL_SAMPLE_COUNT;
-    x-=offsetX;
-    y-=offsetY-0.82;
-    if(Math.abs(x)<0.03) x=0;
-    if(Math.abs(y-0.82)<0.02) y=0.82;
-  }
+  // Базова нейтраль вже врахована через db/dg відносно iPadOrientationNeutral,
+  // тому не додаємо окремий накопичуваний X-offset (він давав крен лише вліво).
+  if(Math.abs(x)<0.03) x=0;
+  if(Math.abs(y-0.82)<0.02) y=0.82;
 
   x=Math.max(-0.95,Math.min(0.95,x));
   y=Math.max(0.18,Math.min(1,y));
@@ -934,9 +919,6 @@ window.addEventListener("pointerdown",async ()=>{
 renderMotionEnableButton();
 
 window.addEventListener("orientationchange",()=>{
-  iPadNeutralX=0;
-  iPadNeutralY=0;
-  iPadNeutralSamples=0;
   iPadOrientationNeutral.ready=false;
   iPadOrientation.ts=0;
 });
