@@ -166,12 +166,34 @@ function getHeartSprite(size){
   return c;
 }
 
-function randomInside(){
+function pointInsideHeartWithMargin(x,y,margin=0){
+  if(!pointInsideHeart(x,y)) return false;
+  if(margin<=0) return true;
+
+  // Щоб сердечко не вилізало за контур при спавні, перевіряємо
+  // не тільки центр, а й точки навколо нього на відстані margin.
+  const m=margin;
+  return (
+    pointInsideHeart(x-m,y) &&
+    pointInsideHeart(x+m,y) &&
+    pointInsideHeart(x,y-m) &&
+    pointInsideHeart(x,y+m) &&
+    pointInsideHeart(x-m*0.7,y-m*0.7) &&
+    pointInsideHeart(x+m*0.7,y-m*0.7) &&
+    pointInsideHeart(x-m*0.7,y+m*0.7) &&
+    pointInsideHeart(x+m*0.7,y+m*0.7)
+  );
+}
+
+function randomInside(margin=0){
+  // Трохи вужчий первинний бокс + перевірка margin дає стабільно
+  // спавн всередині серця без виходу за контур.
+  const spread=17.1;
   let x,y;
   do{
-    x=centerX+(Math.random()-0.5)*scale*18;
-    y=centerY+(Math.random()-0.5)*scale*18;
-  }while(!pointInsideHeart(x,y));
+    x=centerX+(Math.random()-0.5)*scale*spread;
+    y=centerY+(Math.random()-0.5)*scale*spread;
+  }while(!pointInsideHeartWithMargin(x,y,margin));
   return {x,y};
 }
 
@@ -327,7 +349,8 @@ function spawn(){
   if(textMode) return; // важливо: не додаємо нові частинки в режимі тексту
 
   const r = NORMAL_HEART_RADIUS;
-  const pos = randomInside();
+  const spawnMargin=r*1.05;
+  const pos = randomInside(spawnMargin);
 
   const body = Bodies.circle(pos.x,pos.y,r,{
     restitution:0.05,
@@ -490,7 +513,7 @@ function generateTextPoints(){
     return;
   }
 
-  // Трхи більше сердечок у V/M, але більшість лишається на words
+  // Трохи більше сердечок у V/M, але більшість лишається на words
   const total=hearts.length;
   const vCount=Math.round(total*0.13);
   const mCount=Math.round(total*0.30);
