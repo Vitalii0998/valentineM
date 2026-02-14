@@ -550,6 +550,7 @@ Events.on(render,"afterRender",()=>{
 
 let lastShake=0;
 let motionPermissionState="unknown";
+let motionPromptInFlight=false;
 
 function showMotionHint(msg){
   let hint=document.getElementById("motionHint");
@@ -562,6 +563,25 @@ function showMotionHint(msg){
   hint.textContent=msg;
 }
 
+function renderMotionEnableButton(){
+  if(!IS_IOS || window.__motionBound) return;
+  if(document.getElementById("motionEnableBtn")) return;
+  const btn=document.createElement("button");
+  btn.id="motionEnableBtn";
+  btn.textContent="Увімкнути shake";
+  btn.style.cssText="position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:10000;border:0;border-radius:12px;padding:11px 16px;background:#ff3d7a;color:#fff;font:700 14px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;box-shadow:0 8px 20px rgba(0,0,0,.32);";
+  btn.addEventListener("click",async (ev)=>{
+    ev.stopPropagation();
+    const ok=await ensureMotionPermission();
+    if(ok){
+      btn.remove();
+      const hint=document.getElementById("motionHint");
+      if(hint) hint.remove();
+    }
+  });
+  document.body.appendChild(btn);
+}
+
 function bindMotionListener(){
   if(window.__motionBound) return;
   window.addEventListener("devicemotion",motion,{passive:true});
@@ -570,14 +590,17 @@ function bindMotionListener(){
 
 async function ensureMotionPermission(){
   if(window.__motionBound) return true;
+  if(motionPromptInFlight) return false;
+  motionPromptInFlight=true;
 
-  const DME=window.DeviceMotionEvent;
-  if(typeof DME!=="undefined" && typeof DME.requestPermission==="function"){
-    try{
+  try{
+    const DME=window.DeviceMotionEvent;
+    if(typeof DME!=="undefined" && typeof DME.requestPermission==="function"){
       const motionState=await DME.requestPermission();
       if(motionState!=="granted"){
         motionPermissionState="denied";
-        showMotionHint("Натисни Allow у запиті Safari. Якщо вікно не з’являється — перезавантаж сторінку і тапни ще раз у Safari.");
+        showMotionHint("Натисни кнопку «Увімкнути shake», потім Allow у Safari. Якщо вікно не з’являється — перезавантаж сторінку.");
+        renderMotionEnableButton();
         return false;
       }
 
@@ -586,18 +609,23 @@ async function ensureMotionPermission(){
       if(typeof DOE!=="undefined" && typeof DOE.requestPermission==="function"){
         try{ await DOE.requestPermission(); }catch(_err){ /* best-effort */ }
       }
-    }catch(_err){
-      motionPermissionState="denied";
-      showMotionHint("Safari заблокував сенсори. Перевідкрий сторінку у Safari і дозволь доступ у системному діалозі.");
-      return false;
     }
-  }
 
-  bindMotionListener();
-  motionPermissionState="granted";
-  const hint=document.getElementById("motionHint");
-  if(hint) hint.remove();
-  return true;
+    bindMotionListener();
+    motionPermissionState="granted";
+    const hint=document.getElementById("motionHint");
+    if(hint) hint.remove();
+    const btn=document.getElementById("motionEnableBtn");
+    if(btn) btn.remove();
+    return true;
+  }catch(_err){
+    motionPermissionState="denied";
+    showMotionHint("Safari заблокував сенсори. Натисни «Увімкнути shake» і підтвердь Allow.");
+    renderMotionEnableButton();
+    return false;
+  }finally{
+    motionPromptInFlight=false;
+  }
 }
 
 function updateTextMode(){
@@ -725,9 +753,13 @@ function motion(e){
 }
 
 window.addEventListener("pointerdown",async ()=>{
-  const motionReady=await ensureMotionPermission();
-
-  if(!motionReady && !textMode && resetMode==="idle") return;
+  // На iOS prompt стабільніше відкривати з явної кнопки/click.
+  if(!IS_IOS){
+    const motionReady=await ensureMotionPermission();
+    if(!motionReady && !textMode && resetMode==="idle") return;
+  }else if(!window.__motionBound){
+    renderMotionEnableButton();
+  }
 
   if(resetMode==="gather"){
     triggerExplosion();
@@ -737,6 +769,8 @@ window.addEventListener("pointerdown",async ()=>{
     startResetSequence();
   }
 });
+
+renderMotionEnableButton();
 
 window.addEventListener("keydown",e=>{
   if(e.code==="Space"){
