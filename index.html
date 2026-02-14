@@ -1,10 +1,9 @@
 <!doctype html>
 <html lang="uk">
 <head>
-<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>💗</title>
+<title>Heart Physics</title>
 
 <style>
 html,body{
@@ -130,9 +129,9 @@ const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 const TEXT_FORCE_SNAP_MS=1400;
 
-const NORMAL_HEART_RADIUS=5.2;
+const NORMAL_HEART_RADIUS=4.9;
 const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=3100;
+const MAX_HEARTS=2200;
 const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
 const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
@@ -284,7 +283,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.99;
+    h.targetDrawScale=0.36;
     h.textLocked=false;
   }
 }
@@ -553,6 +552,39 @@ let lastShake=0;
 let motionPermissionState="unknown";
 let motionPromptInFlight=false;
 
+function getScreenAngle(){
+  if(window.screen && window.screen.orientation && typeof window.screen.orientation.angle==="number"){
+    return (window.screen.orientation.angle%360+360)%360;
+  }
+  if(typeof window.orientation==="number") return (window.orientation%360+360)%360;
+  return 0;
+}
+
+function mapGravityFromMotion(g){
+  const gx=g.x||0;
+  const gy=g.y||0;
+  const angle=getScreenAngle();
+
+  // Повертаємо осі сенсора у координати екрана, щоб при ротації
+  // сердечка все одно падали "вниз" відносно поточної орієнтації.
+  let sx=gx;
+  let sy=gy;
+  if(angle===90){
+    sx=gy;
+    sy=-gx;
+  }else if(angle===270){
+    sx=-gy;
+    sy=gx;
+  }else if(angle===180){
+    sx=-gx;
+    sy=-gy;
+  }
+
+  // На iOS (Safari) вертикальна вісь здебільшого інвертована відносно Android.
+  const ySign=IS_IOS?-1:1;
+  return {x:sx/10,y:(sy*ySign)/10};
+}
+
 function showMotionHint(msg){
   let hint=document.getElementById("motionHint");
   if(!hint){
@@ -600,7 +632,7 @@ async function ensureMotionPermission(){
       const motionState=await DME.requestPermission();
       if(motionState!=="granted"){
         motionPermissionState="denied";
-        showMotionHint("Натисни кнопку «Увімкнути shake», потім Allow у Safari. Якщо вікно не з’являється — перезавантаж сторінку.");
+        showMotionHint("Натисни кнопку «Start», потім Allow у Safari. Якщо вікно не з’являється — перезавантаж сторінку.");
         renderMotionEnableButton();
         return false;
       }
@@ -621,7 +653,7 @@ async function ensureMotionPermission(){
     return true;
   }catch(_err){
     motionPermissionState="denied";
-    showMotionHint("Safari заблокував сенсори. Натисни «Увімкнути shake» і підтвердь Allow.");
+    showMotionHint("Safari заблокував сенсори. Натисни «Start» і підтвердь Allow.");
     renderMotionEnableButton();
     return false;
   }finally{
@@ -748,10 +780,9 @@ function motion(e){
 
   const g=e.accelerationIncludingGravity;
   if(g){
-    // На iPad Safari осі accelerationIncludingGravity можуть мати протилежний знак
-    // відносно екрана, тому інвертуємо мапінг для стабільного "падіння" вниз.
-    engine.gravity.x=(g.x||0)/10;
-    engine.gravity.y=-(g.y||0)/10;
+    const mapped=mapGravityFromMotion(g);
+    engine.gravity.x=mapped.x;
+    engine.gravity.y=mapped.y;
   }
 }
 
@@ -784,6 +815,3 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
-
-
-
