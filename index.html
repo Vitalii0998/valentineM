@@ -129,10 +129,10 @@ const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 const TEXT_FORCE_SNAP_MS=1400;
 
-const NORMAL_HEART_RADIUS=5.3;
+const NORMAL_HEART_RADIUS=4.9;
 const TEXT_MODE_TRIGGER=900;
-const MAX_HEARTS=2800;
-const SHAKE_SPAWN_BURST=25;
+const MAX_HEARTS=2200;
+const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
 
 const heartSpriteCache=new Map();
@@ -281,7 +281,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=1;
+    h.targetDrawScale=0.36;
     h.textLocked=false;
   }
 }
@@ -547,6 +547,34 @@ Events.on(render,"afterRender",()=>{
 // ---------------- MOTION ----------------
 
 let lastShake=0;
+let motionPermissionState="unknown";
+
+function bindMotionListener(){
+  if(window.__motionBound) return;
+  window.addEventListener("devicemotion",motion,{passive:true});
+  window.__motionBound=true;
+}
+
+async function ensureMotionPermission(){
+  if(window.__motionBound) return true;
+  if(motionPermissionState==="denied") return false;
+
+  const DME=window.DeviceMotionEvent;
+  if(typeof DME!=="undefined" && typeof DME.requestPermission==="function"){
+    try{
+      const state=await DME.requestPermission();
+      motionPermissionState=state;
+      if(state!=="granted") return false;
+    }catch(_err){
+      motionPermissionState="denied";
+      return false;
+    }
+  }
+
+  bindMotionListener();
+  motionPermissionState="granted";
+  return true;
+}
 
 function updateTextMode(){
   if(resetMode==="gather"){
@@ -672,11 +700,9 @@ function motion(e){
   }
 }
 
-window.addEventListener("pointerdown",()=>{
-  if(!window.__motionBound){
-    window.addEventListener("devicemotion",motion,{passive:true});
-    window.__motionBound=true;
-  }
+window.addEventListener("pointerdown",async ()=>{
+  await ensureMotionPermission();
+
   if(resetMode==="gather"){
     triggerExplosion();
     return;
@@ -695,7 +721,3 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
-
-
-
-
