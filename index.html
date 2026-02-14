@@ -129,10 +129,10 @@ const EXPLODE_FAST_CLEANUP_Y=h*0.88;
 const TEXT_MODE_MIN_HOLD_MS=900;
 const TEXT_FORCE_SNAP_MS=1400;
 
-const NORMAL_HEART_RADIUS=4.5;
-const TEXT_MODE_TRIGGER=760;
-const MAX_HEARTS=3100;
-const SHAKE_SPAWN_BURST=25;
+const NORMAL_HEART_RADIUS=4.9;
+const TEXT_MODE_TRIGGER=900;
+const MAX_HEARTS=2200;
+const SHAKE_SPAWN_BURST=20;
 const KEYBOARD_SPAWN_BURST=18;
 
 const heartSpriteCache=new Map();
@@ -281,7 +281,7 @@ function triggerExplosion(){
     h.body.collisionFilter.mask=0x0001;
     Body.setVelocity(h.body,{x:ux*speed,y:uy*speed*0.88-1.7});
     Body.setAngularVelocity(h.body,(Math.random()-0.5)*0.45);
-    h.targetDrawScale=0.9;
+    h.targetDrawScale=0.36;
     h.textLocked=false;
   }
 }
@@ -426,6 +426,18 @@ function generateTextPoints(){
       for(let i=0;i<count;i++) out.push({...randomInside(),drawScale});
       return out;
     }
+
+    // Якщо сердечок менше за кількість точок, беремо точки рівномірно по всьому контуру,
+    // щоб не було випадкових "дір" у літерах через локальну недозаповненість.
+    if(count<=pool.length){
+      for(let i=0;i<count;i++){
+        const idx=Math.floor((i*pool.length)/Math.max(1,count));
+        const base=pool[Math.min(pool.length-1,idx)];
+        out.push({x:base.x,y:base.y,drawScale});
+      }
+      return out;
+    }
+
     for(let i=0;i<count;i++){
       const base=pool[i%pool.length];
       const rep=(i/pool.length)|0;
@@ -482,13 +494,13 @@ function generateTextPoints(){
   const mCount=Math.round(total*0.30);
   const wordCount=total-vCount-mCount;
 
-  targets.push(...assignFromPool(vPoints,vCount,3.1,0.24));
-  targets.push(...assignFromPool(mPoints,mCount,3.1,0.24));
+  targets.push(...assignFromPool(vPoints,vCount,3.1,0.26));
+  targets.push(...assignFromPool(mPoints,mCount,3.1,0.26));
 
   const wordTopCount=Math.round(wordCount*0.70);
   const wordBottomCount=wordCount-wordTopCount;
-  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.16));
-  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.15));
+  targets.push(...assignFromPool(wordTopPoints,wordTopCount,0.14,0.175));
+  targets.push(...assignFromPool(wordBottomPoints,wordBottomCount,0.12,0.165));
 
   shuffle(targets);
 }
@@ -683,5 +695,3 @@ window.addEventListener("keydown",e=>{
 </script>
 </body>
 </html>
-
-
